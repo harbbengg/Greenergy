@@ -137,25 +137,22 @@ STATIC_URL = 'static/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
+# ... (Keep everything above DEFAULT_AUTO_FIELD)
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-import os
-from pathlib import Path
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# ... existing code ...
+# --- STATIC FILES CONFIGURATION (Fixed for Render) ---
+import os # Import os here if it wasn't imported at the top
 
 STATIC_URL = 'static/'
 
-# This is where you put your files (Local)
+# This is where your local files are (Greenergy/core/static)
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'core/static'),
 ]
 
-# This is where Render will collect all files (Production)
+# This is where Render will collect files (Greenergy/staticfiles)
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Enable WhiteNoise storage
+# Enable WhiteNoise to serve files in production
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
