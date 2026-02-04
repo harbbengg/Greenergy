@@ -1,15 +1,13 @@
 import re 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Max 
-from .models import Region, Envelope, Document, AuditLog # <--- Added AuditLog
+from django.db.models import Q, Max, F 
+from .models import Region, Envelope, Document, AuditLog
 from .forms import CustomSignupForm
 
-# --- Helper Function for Logging ---
 def log_activity(user, action, details):
     AuditLog.objects.create(user=user, action=action, details=details)
 
-# --- Signup View ---
 def signup_view(request):
     if request.method == 'POST':
         form = CustomSignupForm(request.POST)
@@ -20,7 +18,6 @@ def signup_view(request):
         form = CustomSignupForm()
     return render(request, 'registration/signup.html', {'form': form})
 
-# --- Main Dashboard ---
 @login_required
 def dashboard(request):
     # 1. Auto-Populate Regions
@@ -36,7 +33,7 @@ def dashboard(request):
         for reg_name in ph_regions:
             Region.objects.create(name=reg_name)
 
-    # 2. Fetch Regions (Sorted)
+    # 2. Fetch Regions (Sorted Natural)
     regions_queryset = Region.objects.all()
     regions = sorted(
         regions_queryset, 
@@ -45,16 +42,14 @@ def dashboard(request):
     
     selected_region_id = request.GET.get('region')
     
-    # 3. Fetch Envelopes & SORTING LOGIC
-    # We annotate 'latest_doc_date' to sort by the most recent document inside the folder
+    # 3. SORTING LOGIC (Newest Date First, Empty Dates Last)
     envelopes = Envelope.objects.annotate(
         latest_doc_date=Max('documents__date_notarized')
     ).prefetch_related('documents')
 
-    # Apply Sorting: Latest date first. If no date, put it last.
-    envelopes = envelopes.order_by('-latest_doc_date', '-id')
+    # F('latest_doc_date').desc(nulls_last=True) ensures folders with NO date go to the bottom
+    envelopes = envelopes.order_by(F('latest_doc_date').desc(nulls_last=True), '-id')
 
-    # Filter by Region
     if selected_region_id:
         envelopes = envelopes.filter(region_id=selected_region_id)
 
@@ -114,7 +109,6 @@ def dashboard(request):
     for env in envelopes:
         env.total_pages = sum(doc.num_pages for doc in env.documents.all())
 
-    # 4. Fetch Audit Logs (Last 20 activities)
     recent_activity = AuditLog.objects.select_related('user').order_by('-timestamp')[:20]
 
     context = {
@@ -122,11 +116,10 @@ def dashboard(request):
         'envelopes': envelopes,
         'selected_region_id': int(selected_region_id) if selected_region_id else None,
         'user': request.user,
-        'recent_activity': recent_activity # Pass logs to template
+        'recent_activity': recent_activity
     }
     return render(request, 'core/dashboard.html', context)
 
-# --- Actions with Logging ---
 @login_required
 def delete_envelope(request, id):
     envelope = get_object_or_404(Envelope, id=id)
@@ -141,6 +134,7 @@ def edit_envelope(request, id):
         envelope = get_object_or_404(Envelope, id=id)
         old_title = envelope.title
         
+        # Update Main Info
         envelope.title = request.POST.get('title')
         envelope.region_id = request.POST.get('region_id')
         envelope.project_entity = request.POST.get('project_entity')
@@ -148,20 +142,42 @@ def edit_envelope(request, id):
         envelope.sales_name = request.POST.get('sales_name')
         envelope.save()
         
-        # Simple doc update logic (clearing old docs or complex mapping is better, but keeping simple for now)
+        # Update/Create Documents
+        # In HTML, we ensure every row sends a doc_id. 
+        # Existing rows send their ID. New rows send "0" or "".
         doc_ids = request.POST.getlist('doc_id[]')
         contexts = request.POST.getlist('context[]')
         pages = request.POST.getlist('pages[]')
         dates = request.POST.getlist('date[]')
         
-        for i, doc_id in enumerate(doc_ids):
-            if i < len(contexts):
-                doc = Document.objects.get(id=doc_id)
-                doc.content_context = contexts[i]
-                doc.num_pages = int(pages[i]) if pages[i] else 0
-                raw_date = dates[i]
-                doc.date_notarized = raw_date if raw_date.strip() != '' else None
-                doc.save()
+        # We loop through 'contexts' because that determines how many rows there are
+        for i in range(len(contexts)):
+            if not contexts[i]: continue # Skip empty rows
+            
+            current_id = doc_ids[i] if i < len(doc_ids) else None
+            
+            raw_date = dates[i]
+            final_date = raw_date if raw_date.strip() != '' else None
+            num_pages = int(pages[i]) if pages[i] else 0
+
+            if current_id and current_id != "0" and current_id != "":
+                # Update Existing
+                try:
+                    doc = Document.objects.get(id=current_id)
+                    doc.content_context = contexts[i]
+                    doc.num_pages = num_pages
+                    doc.date_notarized = final_date
+                    doc.save()
+                except Document.DoesNotExist:
+                    pass
+            else:
+                # Create New
+                Document.objects.create(
+                    envelope=envelope,
+                    content_context=contexts[i],
+                    num_pages=num_pages,
+                    date_notarized=final_date
+                )
         
         log_activity(request.user, "Edited Folder", f"Updated folder: {old_title}")
         return redirect('dashboard')
