@@ -1,9 +1,13 @@
 import re 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
-from .models import Region, Envelope, Document
+from django.db.models import Q, Max 
+from .models import Region, Envelope, Document, AuditLog # <--- Added AuditLog
 from .forms import CustomSignupForm
+
+# --- Helper Function for Logging ---
+def log_activity(user, action, details):
+    AuditLog.objects.create(user=user, action=action, details=details)
 
 # --- Signup View ---
 def signup_view(request):
@@ -19,31 +23,20 @@ def signup_view(request):
 # --- Main Dashboard ---
 @login_required
 def dashboard(request):
-    # --- 1. AUTO-POPULATE PHILIPPINE REGIONS (If Database is Empty) ---
+    # 1. Auto-Populate Regions
     if not Region.objects.exists():
         ph_regions = [
-            "NCR - National Capital Region",
-            "CAR - Cordillera Administrative Region",
-            "Region I - Ilocos Region",
-            "Region II - Cagayan Valley",
-            "Region III - Central Luzon",
-            "Region IV-A - CALABARZON",
-            "Region IV-B - MIMAROPA",
-            "Region V - Bicol Region",
-            "Region VI - Western Visayas",
-            "Region VII - Central Visayas",
-            "Region VIII - Eastern Visayas",
-            "Region IX - Zamboanga Peninsula",
-            "Region X - Northern Mindanao",
-            "Region XI - Davao Region",
-            "Region XII - SOCCSKSARGEN",
-            "Region XIII - Caraga",
-            "BARMM - Bangsamoro Autonomous Region"
+            "NCR - National Capital Region", "CAR - Cordillera Administrative Region",
+            "Region I - Ilocos Region", "Region II - Cagayan Valley", "Region III - Central Luzon",
+            "Region IV-A - CALABARZON", "Region IV-B - MIMAROPA", "Region V - Bicol Region",
+            "Region VI - Western Visayas", "Region VII - Central Visayas", "Region VIII - Eastern Visayas",
+            "Region IX - Zamboanga Peninsula", "Region X - Northern Mindanao", "Region XI - Davao Region",
+            "Region XII - SOCCSKSARGEN", "Region XIII - Caraga", "BARMM - Bangsamoro Autonomous Region"
         ]
         for reg_name in ph_regions:
             Region.objects.create(name=reg_name)
 
-    # --- 2. Fetch Regions (Naturally Sorted) ---
+    # 2. Fetch Regions (Sorted)
     regions_queryset = Region.objects.all()
     regions = sorted(
         regions_queryset, 
@@ -52,8 +45,14 @@ def dashboard(request):
     
     selected_region_id = request.GET.get('region')
     
-    # Fetch Envelopes
-    envelopes = Envelope.objects.all().prefetch_related('documents')
+    # 3. Fetch Envelopes & SORTING LOGIC
+    # We annotate 'latest_doc_date' to sort by the most recent document inside the folder
+    envelopes = Envelope.objects.annotate(
+        latest_doc_date=Max('documents__date_notarized')
+    ).prefetch_related('documents')
+
+    # Apply Sorting: Latest date first. If no date, put it last.
+    envelopes = envelopes.order_by('-latest_doc_date', '-id')
 
     # Filter by Region
     if selected_region_id:
@@ -73,14 +72,13 @@ def dashboard(request):
     # --- HANDLE FORMS ---
     if request.method == 'POST':
         
-        # Add Region (Manual)
         if 'add_region' in request.POST:
             region_name = request.POST.get('region_name')
             if region_name:
                 Region.objects.get_or_create(name=region_name)
+                log_activity(request.user, "Added Region", f"Created region: {region_name}")
             return redirect('dashboard')
 
-        # Add Envelope
         elif 'add_envelope' in request.POST:
             r_id = request.POST.get('region_id')
             title = request.POST.get('title')
@@ -95,11 +93,8 @@ def dashboard(request):
             if r_id and title:
                 region = get_object_or_404(Region, id=r_id)
                 envelope = Envelope.objects.create(
-                    region=region, 
-                    title=title,
-                    project_entity=p_entity,
-                    procuring_entity=proc_entity,
-                    sales_name=sales
+                    region=region, title=title,
+                    project_entity=p_entity, procuring_entity=proc_entity, sales_name=sales
                 )
                 
                 for i in range(len(contexts)):
@@ -112,30 +107,40 @@ def dashboard(request):
                             num_pages=int(pages_list[i]) if pages_list[i] else 0,
                             date_notarized=final_date
                         )
+                
+                log_activity(request.user, "Created Folder", f"Created '{title}' in {region.name}")
             return redirect('dashboard')
 
     for env in envelopes:
         env.total_pages = sum(doc.num_pages for doc in env.documents.all())
 
+    # 4. Fetch Audit Logs (Last 20 activities)
+    recent_activity = AuditLog.objects.select_related('user').order_by('-timestamp')[:20]
+
     context = {
         'regions': regions,
         'envelopes': envelopes,
         'selected_region_id': int(selected_region_id) if selected_region_id else None,
-        'user': request.user
+        'user': request.user,
+        'recent_activity': recent_activity # Pass logs to template
     }
     return render(request, 'core/dashboard.html', context)
 
-# --- Envelope Actions ---
+# --- Actions with Logging ---
 @login_required
 def delete_envelope(request, id):
     envelope = get_object_or_404(Envelope, id=id)
+    title = envelope.title
     envelope.delete()
+    log_activity(request.user, "Deleted Folder", f"Deleted folder: {title}")
     return redirect('dashboard')
 
 @login_required
 def edit_envelope(request, id):
     if request.method == 'POST':
         envelope = get_object_or_404(Envelope, id=id)
+        old_title = envelope.title
+        
         envelope.title = request.POST.get('title')
         envelope.region_id = request.POST.get('region_id')
         envelope.project_entity = request.POST.get('project_entity')
@@ -143,6 +148,7 @@ def edit_envelope(request, id):
         envelope.sales_name = request.POST.get('sales_name')
         envelope.save()
         
+        # Simple doc update logic (clearing old docs or complex mapping is better, but keeping simple for now)
         doc_ids = request.POST.getlist('doc_id[]')
         contexts = request.POST.getlist('context[]')
         pages = request.POST.getlist('pages[]')
@@ -156,22 +162,27 @@ def edit_envelope(request, id):
                 raw_date = dates[i]
                 doc.date_notarized = raw_date if raw_date.strip() != '' else None
                 doc.save()
+        
+        log_activity(request.user, "Edited Folder", f"Updated folder: {old_title}")
         return redirect('dashboard')
     return redirect('dashboard')
 
-# --- Region Actions ---
 @login_required
 def edit_region(request, id):
     if request.method == 'POST':
         region = get_object_or_404(Region, id=id)
+        old_name = region.name
         new_name = request.POST.get('region_name')
         if new_name:
             region.name = new_name
             region.save()
+            log_activity(request.user, "Edited Region", f"Renamed {old_name} to {new_name}")
     return redirect('dashboard')
 
 @login_required
 def delete_region(request, id):
     region = get_object_or_404(Region, id=id)
+    name = region.name
     region.delete()
+    log_activity(request.user, "Deleted Region", f"Deleted region: {name}")
     return redirect('dashboard')

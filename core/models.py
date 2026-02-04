@@ -39,3 +39,14 @@ class Document(models.Model):
 
     def __str__(self):
         return self.content_context
+    
+# ... (Your existing User, Region, Envelope, Document models)
+
+class AuditLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=255) # e.g., "Deleted Folder", "Added Folder"
+    details = models.TextField(blank=True, null=True) # e.g., "Deleted 'Tagalog' folder"
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.action} - {self.timestamp}"
