@@ -146,25 +146,39 @@
                                         {% if env.documents.first %}• {{ env.documents.first.content_context }}{% endif %}
                                     </span>
                                     {% if env.documents.count > 1 %}
-                                        <div class="position-relative more-badge-container">
-                                            <div class="more-badge" onclick="togglePopup('content-popup-{{ env.id }}', event)">+{{ env.documents.count|add:"-1" }} more</div>
-                                            <div id="content-popup-{{ env.id }}" class="content-popup text-start" style="right: 0; left: auto;">
-                                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                                                    <h6 class="text-success fw-bold m-0">Contents</h6>
-                                                    <button type="button" class="btn-close btn-sm" onclick="closeAllPopups()"></button>
-                                                </div>
-                                                <div style="max-height: 300px; overflow-y: auto;">
-                                                    {% for doc in env.documents.all %}
-                                                        <div class="d-flex justify-content-between small mb-2 border-bottom pb-1">
-                                                            <span class="me-3">• {{ doc.content_context }}</span>
-                                                            <span class="text-muted fw-bold">{{ doc.num_pages }}c</span>
-                                                        </div>
-                                                    {% endfor %}
-                                                </div>
-                                                <div class="pt-2 fw-bold text-end small text-muted">Total: {{ env.total_pages }}</div>
-                                            </div>
-                                        </div>
-                                    {% endif %}
+    <div class="position-relative more-badge-container">
+        <div class="more-badge" onclick="togglePopup('content-popup-{{ env.id }}', event)">
+            +{{ env.documents.count|add:"-1" }} more
+        </div>
+
+        <div id="content-popup-{{ env.id }}" class="content-popup text-start" style="right: 0; left: auto; min-width: 350px;">
+            
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                <h6 class="text-success fw-bold m-0">Contents</h6>
+                <button type="button" class="btn-close btn-sm" onclick="closeAllPopups()"></button>
+            </div>
+
+            <div style="max-height: 300px; overflow-y: auto;">
+                {% for doc in env.documents.all %}
+                    <div class="d-flex justify-content-between align-items-start small mb-2 border-bottom pb-1">
+                        <span class="me-2 text-wrap" style="flex: 1;">• {{ doc.content_context }}</span>
+                        
+                        <div class="text-end" style="min-width: 110px;">
+                            <div class="fw-bold text-muted">{{ doc.num_pages }} copies </div>
+                            <div class="text-secondary" style="font-size: 0.7rem;">
+                                {{ doc.date_notarized|default:"No Date" }}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="pt-2 fw-bold text-end small text-muted">
+                Total Copies: {{ env.total_pages }}
+            </div>
+        </div>
+    </div>
+{% endif %}
                                 </div>
                             </td>
                             <td class="p-0 text-center align-middle">
