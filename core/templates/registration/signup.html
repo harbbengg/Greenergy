@@ -1,0 +1,167 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Signup - Greenergy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <style>
+        body {
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* --- 1. THE BLURRED BACKGROUND --- */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("{% static 'images/ground.png' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: blur(8px);
+            transform: scale(1.1);
+            z-index: -1;
+        }
+
+        /* --- 2. GLASS CARD --- */
+        .signup-card {
+            background-color: rgba(255, 255, 255, 0.2); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            width: 100%;
+            max-width: 450px;
+            max-height: 90vh; 
+            overflow-y: auto; 
+        }
+        
+        .btn-success {
+            background-color: #198754;
+            border: none;
+            transition: 0.3s;
+            opacity: 0.9;
+        }
+        .btn-success:hover {
+            background-color: #146c43;
+            transform: scale(1.02);
+            opacity: 1;
+        }
+        
+        .form-label {
+            color: #333;
+            font-weight: 700 !important;
+            font-size: 0.9rem;
+        }
+        
+        .form-control {
+            background-color: rgba(255,255,255,0.8);
+            border: 1px solid #ddd;
+            padding-right: 40px; /* Make room for the eye icon */
+        }
+        .form-control:focus {
+            background-color: #fff;
+            box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+            border-color: #198754;
+        }
+
+        /* Scrollbar styling for the card */
+        .signup-card::-webkit-scrollbar { width: 6px; }
+        .signup-card::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="signup-card">
+        <h3 class="text-center text-success fw-bold mb-4">Create Account</h3>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label">{{ field.label }}</label>
+                
+                {{ field }}
+                
+                {% if field.errors %}
+                    <div class="text-danger small mt-1 fw-bold">{{ field.errors }}</div>
+                {% endif %}
+                {% if field.help_text %}
+                    <div class="form-text small text-dark opacity-75">{{ field.help_text }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-success w-100 py-2 fw-bold mt-2">Sign Up</button>
+        </form>
+        
+        <div class="mt-4 text-center border-top border-secondary pt-3" style="border-color: rgba(0,0,0,0.1) !important;">
+            <small class="text-dark">Already have an account?</small><br>
+            <a href="{% url 'login' %}" class="text-success fw-bold text-decoration-none">Login here</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // 1. Style all inputs
+            var inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(function(input) {
+                input.classList.add('form-control');
+            });
+
+            // 2. Find Password fields and add the "Eye" toggle
+            var passInputs = document.querySelectorAll('input[type="password"]');
+            
+            passInputs.forEach(function(input) {
+                // Create a wrapper div to hold input + icon
+                var wrapper = document.createElement('div');
+                wrapper.className = 'position-relative';
+                
+                // Insert wrapper before input, then move input inside it
+                input.parentNode.insertBefore(wrapper, input);
+                wrapper.appendChild(input);
+                
+                // Create the Eye Icon
+                var icon = document.createElement('i');
+                icon.className = 'bi bi-eye-slash-fill text-secondary'; // Default: Eye Slash (Hidden)
+                
+                // CSS for the Icon
+                icon.style.position = 'absolute';
+                icon.style.right = '15px';
+                icon.style.top = '50%';
+                icon.style.transform = 'translateY(-50%)';
+                icon.style.cursor = 'pointer';
+                icon.style.zIndex = '10';
+                
+                // Click Event to Toggle
+                icon.addEventListener('click', function() {
+                    if (input.type === "password") {
+                        input.type = "text"; // Show password
+                        icon.className = 'bi bi-eye-fill text-success'; // Change icon to open eye
+                    } else {
+                        input.type = "password"; // Hide password
+                        icon.className = 'bi bi-eye-slash-fill text-secondary'; // Change icon back
+                    }
+                });
+
+                // Add icon to wrapper
+                wrapper.appendChild(icon);
+            });
+        });
+    </script>
+
+</body>
+</html>
