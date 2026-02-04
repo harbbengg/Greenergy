@@ -260,7 +260,7 @@
             <div class="modal-header"><h5 class="modal-title">Print Preview</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 <div id="printSection{{ env.id }}" class="border p-4 bg-white text-start">
-                    <div class="text-center mb-4"><h5 class="text-success fw-bold mb-2">GREENENERGY</h5><hr class="border-success"></div>
+                    <div class="text-center mb-4"><h5 class="text-success fw-bold mb-2">GREENERGY</h5><hr class="border-success"></div>
                     <div class="row mb-2"><div class="col-4 text-secondary small text-uppercase fw-bold">Folder Title:</div><div class="col-8 fw-bold">{{ env.title }}</div></div>
                     {% if env.project_entity %}<div class="row mb-2"><div class="col-4 text-secondary small text-uppercase fw-bold">Project Title:</div><div class="col-8 fw-bold">{{ env.project_entity }}</div></div>{% endif %}
                     <div class="row mt-4 mb-2">
@@ -269,12 +269,12 @@
                         {% if env.sales_name %}<div class="col-6 mb-2"><div class="text-secondary small text-uppercase fw-bold">Sales Rep:</div><div>{{ env.sales_name }}</div></div>{% endif %}
                     </div>
                     <table class="table table-sm table-bordered mt-3">
-                        <thead class="table-light"><tr><th>Content / Item</th><th class="text-end" style="width: 80px;">Pages</th><th class="text-end" style="width: 100px;">Date</th></tr></thead>
+                        <thead class="table-light"><tr><th>Content</th><th class="text-end" style="width: 80px;">COPIES</th><th class="text-end" style="width: 100px;">Date</th></tr></thead>
                         <tbody>
                             {% for doc in env.documents.all %}
                             <tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"N/A" }}</td></tr>
                             {% endfor %}
-                            <tr class="fw-bold bg-light"><td>TOTAL PAGES</td><td class="text-end">{{ env.total_pages }}</td><td></td></tr>
+                            <tr class="fw-bold bg-light"><td>TOTAL COPIES</td><td class="text-end">{{ env.total_pages }}</td><td></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -295,13 +295,13 @@
                     <div class="col-md-6"><select name="region_id" class="form-select">{% for region in regions %}<option value="{{ region.id }}" {% if env.region.id == region.id %}selected{% endif %}>{{ region.name }}</option>{% endfor %}</select></div>
                 </div>
                 <div class="row mb-3 bg-light p-2 rounded">
-                    <div class="col-md-4"><label class="small">Project Entity</label><input type="text" name="project_entity" class="form-control form-control-sm" value="{{ env.project_entity|default:'' }}"></div>
+                    <div class="col-md-4"><label class="small">Project Title</label><input type="text" name="project_entity" class="form-control form-control-sm" value="{{ env.project_entity|default:'' }}"></div>
                     <div class="col-md-4"><label class="small">Procuring Entity</label><input type="text" name="procuring_entity" class="form-control form-control-sm" value="{{ env.procuring_entity|default:'' }}"></div>
                     <div class="col-md-4"><label class="small">Sales Name</label><input type="text" name="sales_name" class="form-control form-control-sm" value="{{ env.sales_name|default:'' }}"></div>
                 </div>
                 <hr>
                 <div class="row g-2 mb-1">
-                    <div class="col-6"><small class="text-muted fw-bold">Document Content / Name</small></div>
+                    <div class="col-6"><small class="text-muted fw-bold">Document Content</small></div>
                     <div class="col-2"><small class="text-muted fw-bold"># Copies</small></div>
                     <div class="col-4"><small class="text-muted fw-bold">Date Notarized</small></div>
                 </div>
@@ -363,9 +363,9 @@
             <div class="modal-header bg-success text-white"><h5 class="modal-title">Create New Folder</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 <div class="row mb-3"><div class="col-md-6"><label class="fw-bold">Folder Title</label><input type="text" name="title" class="form-control" placeholder="Main Title" required></div><div class="col-md-6"><label class="fw-bold">Region</label><select name="region_id" class="form-select" required><option value="">-- Region --</option>{% for region in regions %}<option value="{{ region.id }}">{{ region.name }}</option>{% endfor %}</select></div></div>
-                <div class="row mb-3 bg-light p-2 rounded"><div class="col-md-4"><label class="small text-muted">Project Entity</label><input type="text" name="project_entity" class="form-control form-control-sm"></div><div class="col-md-4"><label class="small text-muted">Procuring Entity</label><input type="text" name="procuring_entity" class="form-control form-control-sm"></div><div class="col-md-4"><label class="small text-muted">Sales Name</label><input type="text" name="sales_name" class="form-control form-control-sm"></div></div>
+                <div class="row mb-3 bg-light p-2 rounded"><div class="col-md-4"><label class="small text-muted">Project Title</label><input type="text" name="project_entity" class="form-control form-control-sm"></div><div class="col-md-4"><label class="small text-muted">Procuring Entity</label><input type="text" name="procuring_entity" class="form-control form-control-sm"></div><div class="col-md-4"><label class="small text-muted">Sales Name</label><input type="text" name="sales_name" class="form-control form-control-sm"></div></div>
                 <hr>
-                <div class="row g-2 mb-1"><div class="col-md-6"><small class="text-muted fw-bold">Document Content / Name</small></div><div class="col-md-2"><small class="text-muted fw-bold"># Copies</small></div><div class="col-md-4"><small class="text-muted fw-bold">Date Notarized</small></div></div>
+                <div class="row g-2 mb-1"><div class="col-md-6"><small class="text-muted fw-bold">Document Content</small></div><div class="col-md-2"><small class="text-muted fw-bold"># Copies</small></div><div class="col-md-4"><small class="text-muted fw-bold">Date Notarized</small></div></div>
                 <div id="content-rows">
                     <div class="row g-2 mb-2 content-row"><div class="col-md-6"><input type="text" name="context[]" class="form-control" placeholder="Description" required></div><div class="col-md-2"><input type="number" name="pages[]" class="form-control" placeholder="1" value="1"></div><div class="col-md-4"><input type="date" name="date[]" class="form-control"></div></div>
                 </div>
