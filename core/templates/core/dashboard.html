@@ -46,19 +46,17 @@
         .activity-time { font-size: 0.75rem; color: #999; }
         .activity-user { font-weight: bold; color: #333; }
 
-        /* --- PRINT STYLES (Fixed White Page Issue) --- */
+        /* --- PRINT STYLES --- */
         @media print {
             @page { margin: 0.5cm; size: auto; }
             body { background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             
-            /* Hide everything by default if not using printDiv */
             .sidebar, .main-content-wrapper, .modal-backdrop { display: none !important; }
             
-            /* Grid Layout for Labels (4 per page) */
             .print-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                grid-template-rows: auto auto; /* Allow rows to size naturally */
+                grid-template-rows: auto auto; 
                 gap: 20px;
                 width: 100%;
             }
@@ -75,7 +73,6 @@
             .print-header { text-align: center; border-bottom: 2px solid #198754; margin-bottom: 10px; padding-bottom: 5px; }
             .print-title { color: #198754 !important; font-weight: 900; font-size: 16px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
             
-            /* The Photo-Like Layout */
             .meta-box {
                 background-color: #f8f9fa !important;
                 border: 1px solid #ddd;
@@ -91,7 +88,14 @@
             .meta-col:last-child { border-right: none; }
             
             .meta-label { font-size: 9px; font-weight: bold; color: #666; text-transform: uppercase; display: block; margin-bottom: 2px; }
-            .meta-value { font-size: 12px; font-weight: 900; color: #000; line-height: 1.1; }
+            .meta-value { font-size: 12px; font-weight: 900; color: #000; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            
+            body * { visibility: hidden; }
+            #printAllModal, #printAllModal * { visibility: visible; }
+            #printAllModal { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            .modal-dialog { max-width: 100%; margin: 0; }
+            .modal-content { border: none; box-shadow: none; }
+            .modal-body { padding: 0; max-height: none !important; overflow: visible !important; }
         }
     </style>
 </head>
@@ -150,12 +154,13 @@
                     <thead>
                         <tr>
                             <th class="text-center" style="width: 150px;">Folder Title</th>
-                            <th class="text-center" style="width: 120px;">Sales Rep</th>
+                            <th class="text-center" style="width: 100px;">Sales Rep</th>
+                            <th class="text-center" style="width: 80px;">Door #</th>
                             <th class="text-center" style="width: 120px;">Region</th>
                             <th class="text-center" style="width: 150px;">Context / Contents</th>
-                            <th class="text-center" style="width: 100px;">Copies</th>
+                            <th class="text-center" style="width: 80px;">Copies</th>
                             <th class="text-center" style="width: 100px;">Date Notarized</th>
-                            <th class="text-center" style="width: 140px;">Action</th>
+                            <th class="text-center" style="width: 120px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -175,7 +180,6 @@
                                                 <div class="small">
                                                     {% if env.project_entity %}<div class="mb-2"><span class="fw-bold text-dark">Project:</span> {{ env.project_entity }}</div>{% endif %}
                                                     {% if env.procuring_entity %}<div class="mb-2"><span class="fw-bold text-dark">Procuring:</span> {{ env.procuring_entity }}</div>{% endif %}
-                                                    {% if env.door_number %}<div class="mb-1"><span class="fw-bold text-dark">Door #:</span> {{ env.door_number }}</div>{% endif %}
                                                 </div>
                                             </div>
                                         </div>
@@ -183,6 +187,7 @@
                                 </div>
                             </td>
                             <td class="align-middle text-center small fw-bold text-dark">{{ env.sales_name|default:"-" }}</td>
+                            <td class="align-middle text-center small fw-bold text-dark">{{ env.door_number|default:"-" }}</td>
                             <td class="align-middle text-center small fw-bold text-secondary">{{ env.region.name }}</td>
                             <td class="p-2 align-middle">
                                 <div class="d-flex justify-content-between align-items-center w-100 position-relative">
@@ -230,7 +235,7 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="7" class="text-center py-5 text-muted">No folders found.</td></tr>
+                        <tr><td colspan="8" class="text-center py-5 text-muted">No folders found.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -277,7 +282,6 @@
                                 <div class="print-header"><h5 class="print-title">GREENENERGY</h5></div>
                                 
                                 <div class="fw-bold text-center text-uppercase mb-2" style="font-size: 18px; line-height: 1.2;">{{ env.title }}</div>
-                                
                                 {% if env.project_entity %}<div class="text-center small text-muted fw-bold mb-3">{{ env.project_entity }}</div>{% endif %}
                                 
                                 <div class="meta-box">
