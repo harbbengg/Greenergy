@@ -1,7 +1,7 @@
 import re 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Max, F 
+from django.db.models import Q, Max, F, Prefetch
 from .models import Region, Envelope, Document, AuditLog
 from .forms import CustomSignupForm
 
@@ -20,15 +20,13 @@ def signup_view(request):
 
 @login_required
 def dashboard(request):
-    # 1. Auto-Populate Regions
+    # 1. Auto-Populate Regions (UPDATED: Short Names Only)
     if not Region.objects.exists():
         ph_regions = [
-            "NCR - National Capital Region", "CAR - Cordillera Administrative Region",
-            "Region I - Ilocos Region", "Region II - Cagayan Valley", "Region III - Central Luzon",
-            "Region IV-A - CALABARZON", "Region IV-B - MIMAROPA", "Region V - Bicol Region",
-            "Region VI - Western Visayas", "Region VII - Central Visayas", "Region VIII - Eastern Visayas",
-            "Region IX - Zamboanga Peninsula", "Region X - Northern Mindanao", "Region XI - Davao Region",
-            "Region XII - SOCCSKSARGEN", "Region XIII - Caraga", "BARMM - Bangsamoro Autonomous Region"
+            "NCR", "CAR", "Region I", "Region II", "Region III",
+            "Region IV-A", "Region IV-B", "Region V", "Region VI", 
+            "Region VII", "Region VIII", "Region IX", "Region X", 
+            "Region XI", "Region XII", "Region XIII", "BARMM"
         ]
         for reg_name in ph_regions:
             Region.objects.create(name=reg_name)
@@ -43,9 +41,12 @@ def dashboard(request):
     selected_region_id = request.GET.get('region')
     
     # 3. SORTING LOGIC (Newest Date First, Empty Dates Last)
+    # We use Prefetch to ensure the document displayed in the HTML is the one used for sorting
+    sorted_docs = Prefetch('documents', queryset=Document.objects.order_by('-date_notarized'))
+    
     envelopes = Envelope.objects.annotate(
         latest_doc_date=Max('documents__date_notarized')
-    ).prefetch_related('documents')
+    ).prefetch_related(sorted_docs)
 
     # F('latest_doc_date').desc(nulls_last=True) ensures folders with NO date go to the bottom
     envelopes = envelopes.order_by(F('latest_doc_date').desc(nulls_last=True), '-id')
@@ -53,7 +54,7 @@ def dashboard(request):
     if selected_region_id:
         envelopes = envelopes.filter(region_id=selected_region_id)
 
-    # Search Logic
+    # Search Logic (Added Door Number)
     query = request.GET.get('q')
     if query:
         envelopes = envelopes.filter(
@@ -61,7 +62,8 @@ def dashboard(request):
             Q(documents__content_context__icontains=query) |
             Q(project_entity__icontains=query) |
             Q(procuring_entity__icontains=query) |
-            Q(sales_name__icontains=query)
+            Q(sales_name__icontains=query) |
+            Q(door_number__icontains=query) # <--- Added Search
         ).distinct()
 
     # --- HANDLE FORMS ---
@@ -80,6 +82,7 @@ def dashboard(request):
             p_entity = request.POST.get('project_entity')
             proc_entity = request.POST.get('procuring_entity')
             sales = request.POST.get('sales_name')
+            door = request.POST.get('door_number') # <--- Get Door #
             
             contexts = request.POST.getlist('context[]')
             pages_list = request.POST.getlist('pages[]')
@@ -89,7 +92,8 @@ def dashboard(request):
                 region = get_object_or_404(Region, id=r_id)
                 envelope = Envelope.objects.create(
                     region=region, title=title,
-                    project_entity=p_entity, procuring_entity=proc_entity, sales_name=sales
+                    project_entity=p_entity, procuring_entity=proc_entity, sales_name=sales,
+                    door_number=door # <--- Save Door #
                 )
                 
                 for i in range(len(contexts)):
@@ -140,19 +144,17 @@ def edit_envelope(request, id):
         envelope.project_entity = request.POST.get('project_entity')
         envelope.procuring_entity = request.POST.get('procuring_entity')
         envelope.sales_name = request.POST.get('sales_name')
+        envelope.door_number = request.POST.get('door_number') # <--- Update Door #
         envelope.save()
         
         # Update/Create Documents
-        # In HTML, we ensure every row sends a doc_id. 
-        # Existing rows send their ID. New rows send "0" or "".
         doc_ids = request.POST.getlist('doc_id[]')
         contexts = request.POST.getlist('context[]')
         pages = request.POST.getlist('pages[]')
         dates = request.POST.getlist('date[]')
         
-        # We loop through 'contexts' because that determines how many rows there are
         for i in range(len(contexts)):
-            if not contexts[i]: continue # Skip empty rows
+            if not contexts[i]: continue 
             
             current_id = doc_ids[i] if i < len(doc_ids) else None
             

@@ -20,6 +20,7 @@ class Envelope(models.Model):
     project_entity = models.CharField(max_length=200, blank=True, null=True)
     procuring_entity = models.CharField(max_length=200, blank=True, null=True)
     sales_name = models.CharField(max_length=200, blank=True, null=True)
+    door_number = models.CharField(max_length=50, blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
 
