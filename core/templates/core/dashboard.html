@@ -27,7 +27,6 @@
             border-right: 1px solid #c3e6cb;
             min-height: 100vh;
             transition: all 0.3s;
-            /* Sticky logic handled via CSS flex, but usually fixed is better for sidebar */
             position: fixed;
             height: 100%;
             z-index: 1000;
@@ -142,12 +141,12 @@
                 <thead>
                     <tr>
                         <th class="text-center" style="width: 150px;">Folder Title</th>
-                        <th class="text-center" style="width: 120px;">Region</th>
-                        <th class="text-center" style="width: 150px;">Context / Contents</th>
+                        <th class="text-center" style="width: 45px;">Region</th>
+                        <th class="text-center" style="width: 250px;">Context / Contents</th>
                         <th class="text-center" style="width: 100px;">Sales Rep</th>
-                        <th class="text-center" style="width: 80px;">Copies</th>
-                        <th class="text-center" style="width: 100px;">Date</th>
-                        <th class="text-center" style="width: 80px;">D #</th>
+                        <th class="text-center" style="width: 50px;">Copies</th>
+                        <th class="text-center" style="width: 80px;">Date</th>
+                        <th class="text-center" style="width: 45px;">D #</th>
                         <th class="text-center" style="width: 120px;">Action</th>
                     </tr>
                 </thead>
@@ -175,9 +174,9 @@
                                 {% endif %}
                             </div>
                         </td>
-                        <td class="align-middle text-center small fw-bold text-dark">{{ env.sales_name|default:"-" }}</td>
-                        <td class="align-middle text-center small fw-bold text-dark">{{ env.door_number|default:"-" }}</td>
+
                         <td class="align-middle text-center small fw-bold text-secondary">{{ env.region.name }}</td>
+
                         <td class="p-2 align-middle">
                             <div class="d-flex justify-content-between align-items-center w-100 position-relative">
                                 <span class="text-dark text-truncate me-2" style="max-width: 65%;">
@@ -208,15 +207,22 @@
                                 {% endif %}
                             </div>
                         </td>
+
+                        <td class="align-middle text-center small fw-bold text-dark">{{ env.sales_name|default:"-" }}</td>
+
                         <td class="p-0 text-center align-middle">
                             <div class="py-2">
                                 {% if env.documents.first %}{{ env.documents.first.num_pages }}{% if env.documents.count > 1 %}<span class="text-muted small">..</span>{% endif %}{% endif %}
                             </div>
                             <div class="fw-bold bg-light small border-top py-1 w-100">Total: {{ env.total_pages }}</div>
                         </td>
-                        <td class="align-middle">
+
+                        <td class="align-middle text-center">
                             {% with env.documents.first as first_doc %}{{ first_doc.date_notarized|default:"N/A" }}{% endwith %}
                         </td>
+
+                        <td class="align-middle text-center small fw-bold text-dark">{{ env.door_number|default:"-" }}</td>
+
                         <td class="align-middle text-center bg-light">
                             <button class="btn-icon text-dark" data-bs-toggle="modal" data-bs-target="#previewModal{{ env.id }}"><i class="bi bi-printer-fill fs-5"></i></button>
                             <button class="btn-icon text-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ env.id }}"><i class="bi bi-pencil-square fs-5"></i></button>
