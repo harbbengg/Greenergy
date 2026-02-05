@@ -10,17 +10,9 @@
     
     <style>
         :root {
-            /* --- CONTROLS --- */
             --card-width: 450px;
-            
-            /* 1. Use this to pull the logo UP (Negative number removes top space) */
-            --logo-pull-up: -40px; 
-            
-            /* 2. Spacing for the form area (Sides) */
-            --content-padding-side: 40px;
-            
-            /* 3. Spacing at the very bottom (Below 'Create Account') */
-            --content-padding-bottom: 20px; 
+            /* Adjust this if your PNG image has invisible empty space at the top */
+            --logo-pull-up: 0px; 
         }
 
         body {
@@ -52,11 +44,17 @@
             background-color: rgba(255, 255, 255, 0.2); 
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            padding: 0; /* No padding on container */
+            
+            /* ZERO PADDING ensures logo hits the edges */
+            padding: 0; 
+            
             max-width: var(--card-width);
             width: 100%;
             border-radius: 15px;
-            overflow: hidden; /* Clips the logo if we pull it up too much */
+            
+            /* Important: Clips the corners of the image to match the card */
+            overflow: hidden; 
+            
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.4);
             text-align: center; 
@@ -64,22 +62,20 @@
 
         /* LOGO */
         .login-logo {
-            width: 100%;
-            height: auto;
-            display: block;
-            margin: 0;
-            object-fit: cover;
+            width: 100%;        /* Forces full width */
+            height: auto;       /* Keeps aspect ratio */
+            display: block;     /* Removes bottom inline gap */
+            margin: 0;          /* Resets margins */
+            object-fit: cover;  
             
-            /* THIS PULLS THE IMAGE UP TO HIDE WHITE SPACE */
-            margin-top: var(--logo-pull-up);
+            /* Only change this if your actual image file has white space at the top */
+            margin-top: var(--logo-pull-up); 
         }
 
         /* CONTENT WRAPPER */
         .login-content {
-            padding-left: var(--content-padding-side);
-            padding-right: var(--content-padding-side);
-            padding-bottom: var(--content-padding-bottom);
-            padding-top: 10px; /* Small gap between logo and 'Welcome' */
+            /* Spacing for the form text (Top, Right, Bottom, Left) */
+            padding: 15px 40px 40px 40px; 
         }
         
         .btn-success {
