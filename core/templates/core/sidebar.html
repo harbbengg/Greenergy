@@ -1,0 +1,28 @@
+{% load static %}
+
+<div id="sidebar-wrapper" class="d-flex flex-column">
+    
+    <a href="{% url 'dashboard' %}" class="text-decoration-none text-center border-bottom bg-white d-block" style="padding: 0;">
+        <img src="{% static 'images/nergy.png' %}" alt="Greenergy" style="width: 100%; height: auto; display: block; margin-bottom: 10px; margin-top: 10px; margin-left: 5px;" >
+    </a>
+
+    <div class="d-flex justify-content-between align-items-center px-3 text-secondary" style="margin-top: 5px; margin-bottom: 5px;">
+        <span class="small fw-bold">REGIONS</span>
+        <a href="#" class="text-success text-decoration-none fw-bold fs-5" data-bs-toggle="modal" data-bs-target="#addRegionModal" title="Add Region">+</a>
+    </div>
+
+    <div class="list-group list-group-flush mb-auto">
+        <div class="sidebar-item-container {% if not selected_region_id %}active{% endif %}">
+            <a href="{% url 'dashboard' %}" class="sidebar-link">All Regions</a>
+        </div>
+        {% for region in regions %}
+        <div class="sidebar-item-container {% if selected_region_id == region.id %}active{% endif %}">
+            <a href="?region={{ region.id }}" class="sidebar-link" title="{{ region.name }}">{{ region.name }}</a>
+            <div class="sidebar-actions">
+                <i class="bi bi-pencil-square text-primary me-2" role="button" data-bs-toggle="modal" data-bs-target="#editRegionModal{{ region.id }}"></i>
+                <i class="bi bi-trash-fill text-danger" role="button" data-bs-toggle="modal" data-bs-target="#deleteRegionModal{{ region.id }}"></i>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
