@@ -41,7 +41,14 @@ class Document(models.Model):
     def __str__(self):
         return self.content_context
 
-# 6. Audit Log
+# 6. Document Types (NEW: For Permanent Suggestions)
+class DocumentType(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+
+    def __str__(self):
+        return self.name
+
+# 7. Audit Log
 class AuditLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=255)
