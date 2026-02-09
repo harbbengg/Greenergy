@@ -16,9 +16,14 @@
         .check-circle:hover { transform: scale(1.2); }
         .printed-indicator { font-size: 0.8rem; margin-left: 5px; }
         
-        /* Sortable Header Style */
-        th.sortable { cursor: pointer; user-select: none; position: relative; }
-        th.sortable:hover { background-color: #e2e6ea !important; } /* Slight darken on hover */
+        /* Sortable Header Style - Making sure it looks clickable */
+        th.sortable { 
+            cursor: pointer !important; 
+            user-select: none; 
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        th.sortable:hover { background-color: #d1e7dd !important; color: #0f5132; }
     </style>
 </head>
 <body>
@@ -259,7 +264,7 @@
         clearBtn.onclick = () => { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); };
     });
 
-    // --- STRICT DATE VALIDATION ---
+    // --- STRICT DATE VALIDATION (Prevents bad submission) ---
     function validateDates(form) {
         if(!form) form = document.getElementById('addEnvelopeForm');
         let dateInputs = form.querySelectorAll('input[type="date"]');
@@ -269,54 +274,67 @@
                 // Rule: Must be between 1900 and 2030
                 if (year < 1900 || year > 2030) {
                     alert("Invalid Date! Year must be between 1900 and 2030.");
-                    input.focus(); // Focus on the bad input
-                    return false; // STOP SUBMISSION
+                    input.focus();
+                    return false; // Stop form
                 }
             }
         }
-        return true; // Allow submission
+        return true; // Proceed
     }
 
-    // --- TABLE SORTING LOGIC (With "N/A" at bottom) ---
-    let tableSortOrder = 'desc'; 
+    // --- SORTING LOGIC (With 3-Way Cycle) ---
+    let currentSortMode = 'default'; // Start at Default (Newest First from Server)
+
     function sortTableByDate() {
         const tableBody = document.getElementById('tableBody');
         const rows = Array.from(tableBody.querySelectorAll('tr'));
         const icon = document.getElementById('dateSortIcon');
 
-        // Cycle: desc -> asc -> default
-        if (tableSortOrder === 'desc') {
-            tableSortOrder = 'asc';
-            icon.className = 'bi bi-sort-up text-primary small';
+        // Logic Cycle: Default -> Ascending (Old to New) -> Descending (New to Old) -> Default (Reload)
+        
+        if (currentSortMode === 'default' || currentSortMode === 'desc') {
+            // 1. Switch to Oldest -> Newest (Ascending)
+            currentSortMode = 'asc';
+            icon.className = 'bi bi-sort-down-alt text-primary small'; // Icon: 1-9 (Ascending)
+            
             rows.sort((a, b) => {
-                let dateA = a.getAttribute('data-date') || "0000-00-00";
-                let dateB = b.getAttribute('data-date') || "0000-00-00";
+                let dateA = a.getAttribute('data-date');
+                let dateB = b.getAttribute('data-date');
                 // N/A Logic: Force to bottom
-                if(dateA === "0000-00-00") return 1; 
-                if(dateB === "0000-00-00") return -1;
+                const isInvalidA = !dateA || dateA === "0000-00-00" || dateA === "None";
+                const isInvalidB = !dateB || dateB === "0000-00-00" || dateB === "None";
+                if (isInvalidA && isInvalidB) return 0;
+                if (isInvalidA) return 1; 
+                if (isInvalidB) return -1; 
                 return dateA.localeCompare(dateB);
             });
-        } else if (tableSortOrder === 'asc') {
-            tableSortOrder = 'default';
-            icon.className = 'bi bi-arrow-down-up small';
-            location.reload(); // Reload to get original order
-            return;
-        } else {
-            tableSortOrder = 'desc';
-            icon.className = 'bi bi-sort-down text-primary small';
+
+        } else if (currentSortMode === 'asc') {
+            // 2. Switch to Newest -> Oldest (Descending)
+            currentSortMode = 'desc';
+            icon.className = 'bi bi-sort-up text-primary small'; // Icon: 9-1 (Descending)
+
             rows.sort((a, b) => {
-                let dateA = a.getAttribute('data-date') || "0000-00-00";
-                let dateB = b.getAttribute('data-date') || "0000-00-00";
-                // N/A Logic: Force to bottom
-                if(dateA === "0000-00-00") return 1; 
-                if(dateB === "0000-00-00") return -1;
+                let dateA = a.getAttribute('data-date');
+                let dateB = b.getAttribute('data-date');
+                const isInvalidA = !dateA || dateA === "0000-00-00" || dateA === "None";
+                const isInvalidB = !dateB || dateB === "0000-00-00" || dateB === "None";
+                if (isInvalidA && isInvalidB) return 0;
+                if (isInvalidA) return 1; 
+                if (isInvalidB) return -1; 
                 return dateB.localeCompare(dateA);
             });
+
+        } else {
+            // 3. Reset to Default
+            location.reload();
+            return;
         }
         
         rows.forEach(row => tableBody.appendChild(row));
     }
 
+    // --- OTHER LOGIC (Synced) ---
     function updateModalListStatus(id, isPrinted) {
         const checkbox = document.querySelector(`.selection-item input[value="${id}"]`);
         if (checkbox) {
