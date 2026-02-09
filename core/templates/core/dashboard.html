@@ -10,23 +10,15 @@
     <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
     
     <style>
-        /* INLINE OVERRIDES FOR SPECIFIC LAYOUT REQUESTS */
         .custom-table { table-layout: fixed; width: 100%; }
-        
-        /* Action Column Layout */
-        .action-cell {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px; /* Space between icons */
-        }
-        
-        /* Printed Checkbox Style */
+        .action-cell { display: flex; align-items: center; justify-content: center; gap: 10px; }
         .check-circle { cursor: pointer; transition: transform 0.2s; font-size: 1.2rem; }
         .check-circle:hover { transform: scale(1.2); }
-
-        /* Print Selection List - Printed Indicator */
         .printed-indicator { font-size: 0.8rem; margin-left: 5px; }
+        
+        /* Sortable Header Style */
+        th.sortable { cursor: pointer; user-select: none; position: relative; }
+        th.sortable:hover { background-color: #e2e6ea !important; } /* Slight darken on hover */
     </style>
 </head>
 <body>
@@ -60,7 +52,7 @@
         </div>
 
         <div id="tableContainer" class="shadow-sm" style="background: white; overflow: visible;">
-            <table class="table table-bordered custom-table mb-0">
+            <table class="table table-bordered custom-table mb-0" id="mainTable">
                 <thead>
                     <tr>
                         <th class="text-center" style="width: 300px;">Folder Title</th>
@@ -68,30 +60,28 @@
                         <th class="text-center" style="width: 250px;">Context / Contents</th>
                         <th class="text-center" style="width: 100px;">Sales Rep</th>
                         <th class="text-center" style="width: 50px;">Copies</th>
-                        <th class="text-center" style="width: 80px;">Date</th>
+                        
+                        <th class="text-center sortable" style="width: 80px;" onclick="sortTableByDate()">
+                            Date <i id="dateSortIcon" class="bi bi-arrow-down-up small ms-1"></i>
+                        </th>
+                        
                         <th class="text-center" style="width: 45px;">D #</th>
-                        <th class="text-center" style="width: 160px;">Action</th> 
+                        <th class="text-center" style="width: 160px;">Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tableBody">
                     {% for env in envelopes %}
-                    <tr>
+                    <tr data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'0000-00-00' }}{% endwith %}">
                         <td class="align-middle bg-light">
                             <div class="d-flex align-items-start justify-content-between w-100 position-relative">
                                 <div class="fw-bold text-success me-2" style="flex: 1; word-break: break-word; white-space: normal; line-height: 1.2;">
                                     {{ env.title }}
                                 </div>
-                                
                                 {% if env.meta_details.exists %}
                                     <div class="position-relative more-badge-container flex-shrink-0 ms-1">
-                                        <span class="more-badge" onclick="togglePopup('details-popup-{{ env.id }}', event)">
-                                            Details ℹ️
-                                        </span>
+                                        <span class="more-badge" onclick="togglePopup('details-popup-{{ env.id }}', event)">Details ℹ️</span>
                                         <div id="details-popup-{{ env.id }}" class="content-popup text-start">
-                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                                                <h6 class="text-success fw-bold m-0">Project Details</h6>
-                                                <button type="button" class="btn-close btn-sm" onclick="closeAllPopups()"></button>
-                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2"><h6 class="text-success fw-bold m-0">Project Details</h6><button type="button" class="btn-close btn-sm" onclick="closeAllPopups()"></button></div>
                                             <div style="max-height: 250px; overflow-y: auto;">
                                                 {% for meta in env.meta_details.all %}
                                                 <div class="mb-2 border-bottom pb-2 bg-light p-2 rounded">
@@ -105,9 +95,7 @@
                                 {% endif %}
                             </div>
                         </td>
-
                         <td class="align-middle text-center small fw-bold text-secondary">{{ env.region.name }}</td>
-
                         <td class="p-2 align-middle">
                             <div class="d-flex justify-content-between align-items-center w-100 position-relative">
                                 <span class="text-dark text-truncate me-2" style="max-width: 65%;">{% if env.documents.first %}• {{ env.documents.first.content_context }}{% endif %}</span>
@@ -115,19 +103,10 @@
                                     <div class="position-relative more-badge-container">
                                         <div class="more-badge" onclick="togglePopup('content-popup-{{ env.id }}', event)">+{{ env.documents.count|add:"-1" }} more</div>
                                         <div id="content-popup-{{ env.id }}" class="content-popup text-start">
-                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                                                <h6 class="text-success fw-bold m-0">Contents</h6>
-                                                <button type="button" class="btn-close btn-sm" onclick="closeAllPopups()"></button>
-                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2"><h6 class="text-success fw-bold m-0">Contents</h6><button type="button" class="btn-close btn-sm" onclick="closeAllPopups()"></button></div>
                                             <div style="max-height: 300px; overflow-y: auto;">
                                                 {% for doc in env.documents.all %}
-                                                    <div class="d-flex justify-content-between align-items-start small mb-2 border-bottom pb-1">
-                                                        <span class="me-2 text-wrap" style="flex: 1;">• {{ doc.content_context }}</span>
-                                                        <div class="text-end" style="min-width: 110px;">
-                                                            <div class="fw-bold text-muted">{{ doc.num_pages }} copies</div>
-                                                            <div class="text-secondary" style="font-size: 0.7rem;">{{ doc.date_notarized|default:"No Date" }}</div>
-                                                        </div>
-                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-start small mb-2 border-bottom pb-1"><span class="me-2 text-wrap" style="flex: 1;">• {{ doc.content_context }}</span><div class="text-end" style="min-width: 110px;"><div class="fw-bold text-muted">{{ doc.num_pages }} copies</div><div class="text-secondary" style="font-size: 0.7rem;">{{ doc.date_notarized|default:"No Date" }}</div></div></div>
                                                 {% endfor %}
                                             </div>
                                             <div class="pt-2 fw-bold text-end small text-muted">Total Copies: {{ env.total_pages }}</div>
@@ -136,7 +115,6 @@
                                 {% endif %}
                             </div>
                         </td>
-
                         <td class="align-middle text-center small fw-bold text-dark">{% with env.meta_details.first as m %}{{ m.sales_name|default:"-" }}{% endwith %}</td>
                         <td class="p-0 text-center align-middle">
                             <div class="py-2">{% if env.documents.first %}{{ env.documents.first.num_pages }}{% endif %}</div>
@@ -144,7 +122,6 @@
                         </td>
                         <td class="align-middle text-center small">{% with env.documents.first as first_doc %}{{ first_doc.date_notarized|default:"N/A" }}{% endwith %}</td>
                         <td class="align-middle text-center small fw-bold text-dark">{% with env.meta_details.first as m %}{{ m.door_number|default:"-" }}{% endwith %}</td>
-                        
                         <td class="align-middle text-center bg-light">
                             <div class="action-cell">
                                 {% if env.is_printed %}
@@ -152,9 +129,7 @@
                                 {% else %}
                                     <i class="bi bi-circle text-secondary check-circle" id="check-{{ env.id }}" onclick="togglePrintedStatus({{ env.id }})" title="Mark as Printed"></i>
                                 {% endif %}
-                                
                                 <div class="vr"></div>
-
                                 <button class="btn-icon text-dark" onclick="prepareSinglePrint({{ env.id }})" title="Print Folder"><i class="bi bi-printer-fill fs-5"></i></button>
                                 <button class="btn-icon text-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ env.id }}" title="Edit Folder"><i class="bi bi-pencil-square fs-5"></i></button>
                                 <button class="btn-icon text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ env.id }}" title="Delete Folder"><i class="bi bi-trash-fill fs-5"></i></button>
@@ -169,60 +144,24 @@
 </div>
 
 <div class="modal fade" id="activityModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">Recent Activity</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
-                {% for log in recent_activity %}
-                <div class="activity-item">
-                    <div class="d-flex justify-content-between"><span class="activity-user">{{ log.user.username }}</span><span class="activity-time">{{ log.timestamp|date:"M d, Y H:i" }}</span></div>
-                    <div class="text-success small fw-bold">{{ log.action }}</div>
-                    <div class="text-muted small">{{ log.details }}</div>
-                </div>
-                {% empty %}<p class="text-center text-muted">No activity yet.</p>{% endfor %}
-            </div>
-        </div>
-    </div>
+    <div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-success text-white"><h5 class="modal-title">Recent Activity</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" style="max-height: 400px; overflow-y: auto;">{% for log in recent_activity %}<div class="activity-item"><div class="d-flex justify-content-between"><span class="activity-user">{{ log.user.username }}</span><span class="activity-time">{{ log.timestamp|date:"M d, Y H:i" }}</span></div><div class="text-success small fw-bold">{{ log.action }}</div><div class="text-muted small">{{ log.details }}</div></div>{% empty %}<p class="text-center text-muted">No activity yet.</p>{% endfor %}</div></div></div>
 </div>
 
-<div class="modal fade" id="addNewDocTypeModal" tabindex="-1" style="z-index: 1060;">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-dark text-white p-2"><h6 class="modal-title small">Add New Document Type</h6><button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body p-3">
-                <input type="text" id="newDocTypeName" class="form-control mb-2" placeholder="e.g. BID SECURING">
-                <button type="button" class="btn btn-success btn-sm w-100" onclick="saveNewDocType()">Save & Add</button>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="addNewDocTypeModal" tabindex="-1" style="z-index: 1060;"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header bg-dark text-white p-2"><h6 class="modal-title small">Add New Document Type</h6><button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button></div><div class="modal-body p-3"><input type="text" id="newDocTypeName" class="form-control mb-2" placeholder="e.g. BID SECURING"><button type="button" class="btn btn-success btn-sm w-100" onclick="saveNewDocType()">Save & Add</button></div></div></div></div>
 
 <div class="modal fade" id="addEnvelopeModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <form id="addEnvelopeForm" method="post" class="modal-content">
+        <form id="addEnvelopeForm" method="post" class="modal-content" onsubmit="return validateDates(this)">
             {% csrf_token %}
             <input type="hidden" name="add_envelope" value="true">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">Create New Folder</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="resetForm()"></button>
-            </div>
+            <div class="modal-header bg-success text-white"><h5 class="modal-title">Create New Folder</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="resetForm()"></button></div>
             <div class="modal-body">
                 <div class="row mb-3">
                     <div class="col-md-6"><label class="fw-bold">Folder Title</label><input type="text" name="title" class="form-control" required></div>
                     <div class="col-md-6"><label class="fw-bold">Region</label><select name="region_id" class="form-select" required><option value="">-- Region --</option>{% for region in regions %}<option value="{{ region.id }}">{{ region.name }}</option>{% endfor %}</select></div>
                 </div>
                 <label class="fw-bold small text-muted mb-1">Project Details (Multi-Row)</label>
-                <div id="meta-rows-container">
-                    <div class="row g-1 mb-2 bg-light p-2 rounded border meta-row">
-                        <div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div>
-                        <div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div>
-                        <div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div>
-                        <div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div>
-                    </div>
-                </div>
+                <div id="meta-rows-container"><div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div></div>
                 <button type="button" class="btn btn-outline-primary btn-sm mb-3" onclick="addMetaRow('meta-rows-container')">+ Add Row</button>
                 <hr><label class="fw-bold small text-muted mb-1">Documents</label>
                 <div class="row g-2 mb-1"><div class="col-md-6 small fw-bold text-secondary">Document Name</div><div class="col-md-2 small fw-bold text-secondary">No. of Copies</div><div class="col-md-4 small fw-bold text-secondary">Date</div></div>
@@ -237,7 +176,7 @@
 {% for env in envelopes %}
 <div class="modal fade" id="editModal{{ env.id }}" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <form action="{% url 'edit_envelope' env.id %}" method="post" class="modal-content">
+        <form action="{% url 'edit_envelope' env.id %}" method="post" class="modal-content" onsubmit="return validateDates(this)">
             {% csrf_token %}
             <div class="modal-header bg-success text-white"><h5 class="modal-title">Edit Folder</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
@@ -247,19 +186,13 @@
                 </div>
                 <label class="fw-bold small text-muted">Project Details</label>
                 <div id="edit-meta-rows-{{ env.id }}">
-                    {% for meta in env.meta_details.all %}
-                    <div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" value="{{ meta.project_entity }}"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" value="{{ meta.procuring_entity }}"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" value="{{ meta.sales_name }}"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" value="{{ meta.door_number }}"></div></div>
-                    {% empty %}
-                    <div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door"></div></div>
-                    {% endfor %}
+                    {% for meta in env.meta_details.all %}<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" value="{{ meta.project_entity }}"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" value="{{ meta.procuring_entity }}"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" value="{{ meta.sales_name }}"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" value="{{ meta.door_number }}"></div></div>{% empty %}<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door"></div></div>{% endfor %}
                 </div>
                 <button type="button" class="btn btn-outline-primary btn-sm mb-3" onclick="addMetaRow('edit-meta-rows-{{ env.id }}')">+ Add Row</button>
                 <hr><label class="fw-bold small text-muted">Documents</label>
                 <div class="row g-1 mb-1"><div class="col-6 small fw-bold text-secondary">Document Name</div><div class="col-2 small fw-bold text-secondary">No. of Copies</div><div class="col-4 small fw-bold text-secondary">Date</div></div>
                 <div id="edit-content-rows-{{ env.id }}">
-                    {% for doc in env.documents.all %}
-                    <div class="row g-1 mb-2"><div class="col-6"><div class="autocomplete-wrapper"><div class="input-group input-group-sm"><input type="text" name="context[]" class="form-control form-control-sm" value="{{ doc.content_context }}" autocomplete="off" onfocus="showDropdown(this)" onblur="hideDropdown(this)"><span class="input-group-text" onclick="toggleDropdown(this)"><i class="bi bi-chevron-down"></i></span></div><div class="autocomplete-items">{% for dtype in doc_types %}<div class="autocomplete-item"><span onmousedown="selectItem(this)">{{ dtype.name }}</span><span class="delete-doc-btn" onmousedown="deleteDocType('{{ dtype.id }}', this)">🗑️</span></div>{% endfor %}<div class="autocomplete-add-btn" onmousedown="openAddDocModal()">+ Add New Document</div></div></div></div><div class="col-2"><input type="number" name="pages[]" class="form-control form-control-sm" value="{{ doc.num_pages }}"></div><div class="col-4"><input type="date" name="date[]" class="form-control form-control-sm" value="{{ doc.date_notarized|date:'Y-m-d' }}"></div></div>
-                    {% endfor %}
+                    {% for doc in env.documents.all %}<div class="row g-1 mb-2"><div class="col-6"><div class="autocomplete-wrapper"><div class="input-group input-group-sm"><input type="text" name="context[]" class="form-control form-control-sm" value="{{ doc.content_context }}" autocomplete="off" onfocus="showDropdown(this)" onblur="hideDropdown(this)"><span class="input-group-text" onclick="toggleDropdown(this)"><i class="bi bi-chevron-down"></i></span></div><div class="autocomplete-items">{% for dtype in doc_types %}<div class="autocomplete-item"><span onmousedown="selectItem(this)">{{ dtype.name }}</span><span class="delete-doc-btn" onmousedown="deleteDocType('{{ dtype.id }}', this)">🗑️</span></div>{% endfor %}<div class="autocomplete-add-btn" onmousedown="openAddDocModal()">+ Add New Document</div></div></div></div><div class="col-2"><input type="number" name="pages[]" class="form-control form-control-sm" value="{{ doc.num_pages }}"></div><div class="col-4"><input type="date" name="date[]" class="form-control form-control-sm" value="{{ doc.date_notarized|date:'Y-m-d' }}"></div></div>{% endfor %}
                 </div>
                 <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addEditRow({{ env.id }})">+ Doc</button>
             </div>
@@ -276,7 +209,6 @@
 <div class="modal fade" id="printSelectionModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header border-0 pb-0"><div class="w-100 text-center"><h5 class="fw-bold">Print</h5></div></div><div class="modal-body">
     <input type="text" id="printSearch" class="form-control rounded-pill mb-3 text-center fw-bold" placeholder="Search Title">
     <div class="d-flex justify-content-between align-items-center mb-2 px-2"><span class="small fw-bold" id="sortLabel" style="cursor: pointer;" onclick="sortSelectionByDate()">Sort by: Date</span><button id="sortBtn" class="btn btn-sm btn-link text-dark p-0" onclick="sortSelectionByDate()"><i class="bi bi-sort-down"></i></button></div>
-    
     <div class="selection-list" id="selectionListContainer">
         {% for env in envelopes %}
         <div class="selection-item" data-title="{{ env.title|lower }}" data-date="{% with env.documents.first as doc %}{{ doc.date_notarized|date:'Ymd' }}{% endwith %}" onclick="toggleSelection(this)">
@@ -300,8 +232,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.getElementById("menu-toggle").addEventListener("click", function(e) { e.preventDefault(); document.getElementById("wrapper").classList.toggle("toggled"); });
-    
-    // --- GLOBAL DOC TYPES ---
     let globalDocTypes = [{% for dtype in doc_types %}{ id: "{{ dtype.id }}", name: "{{ dtype.name }}" },{% endfor %}];
     function getDropdownHTML(value = '') {
         let listItems = globalDocTypes.map(doc => `<div class="autocomplete-item"><span onmousedown="selectItem(this)">${doc.name}</span><span class="delete-doc-btn" onmousedown="deleteDocType('${doc.id}', this)">🗑️</span></div>`).join('');
@@ -329,17 +259,70 @@
         clearBtn.onclick = () => { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); };
     });
 
-    // --- SYNCHRONIZE TABLE AND MODAL LIST ---
+    // --- STRICT DATE VALIDATION ---
+    function validateDates(form) {
+        if(!form) form = document.getElementById('addEnvelopeForm');
+        let dateInputs = form.querySelectorAll('input[type="date"]');
+        for (let input of dateInputs) {
+            if (input.value) {
+                const year = parseInt(input.value.split('-')[0]);
+                // Rule: Must be between 1900 and 2030
+                if (year < 1900 || year > 2030) {
+                    alert("Invalid Date! Year must be between 1900 and 2030.");
+                    input.focus(); // Focus on the bad input
+                    return false; // STOP SUBMISSION
+                }
+            }
+        }
+        return true; // Allow submission
+    }
+
+    // --- TABLE SORTING LOGIC (With "N/A" at bottom) ---
+    let tableSortOrder = 'desc'; 
+    function sortTableByDate() {
+        const tableBody = document.getElementById('tableBody');
+        const rows = Array.from(tableBody.querySelectorAll('tr'));
+        const icon = document.getElementById('dateSortIcon');
+
+        // Cycle: desc -> asc -> default
+        if (tableSortOrder === 'desc') {
+            tableSortOrder = 'asc';
+            icon.className = 'bi bi-sort-up text-primary small';
+            rows.sort((a, b) => {
+                let dateA = a.getAttribute('data-date') || "0000-00-00";
+                let dateB = b.getAttribute('data-date') || "0000-00-00";
+                // N/A Logic: Force to bottom
+                if(dateA === "0000-00-00") return 1; 
+                if(dateB === "0000-00-00") return -1;
+                return dateA.localeCompare(dateB);
+            });
+        } else if (tableSortOrder === 'asc') {
+            tableSortOrder = 'default';
+            icon.className = 'bi bi-arrow-down-up small';
+            location.reload(); // Reload to get original order
+            return;
+        } else {
+            tableSortOrder = 'desc';
+            icon.className = 'bi bi-sort-down text-primary small';
+            rows.sort((a, b) => {
+                let dateA = a.getAttribute('data-date') || "0000-00-00";
+                let dateB = b.getAttribute('data-date') || "0000-00-00";
+                // N/A Logic: Force to bottom
+                if(dateA === "0000-00-00") return 1; 
+                if(dateB === "0000-00-00") return -1;
+                return dateB.localeCompare(dateA);
+            });
+        }
+        
+        rows.forEach(row => tableBody.appendChild(row));
+    }
+
     function updateModalListStatus(id, isPrinted) {
-        // Find the checkbox in the modal list with this ID
         const checkbox = document.querySelector(`.selection-item input[value="${id}"]`);
         if (checkbox) {
             const container = checkbox.closest('.selection-item').querySelector('.fw-bold');
-            // Remove existing badge if any
             const existingBadge = container.querySelector('.printed-indicator');
             if (existingBadge) existingBadge.remove();
-
-            // Add badge if printed
             if (isPrinted) {
                 const badge = document.createElement('span');
                 badge.className = 'text-success printed-indicator ms-2';
@@ -348,167 +331,40 @@
             }
         }
     }
-
-    // --- PRINT STATUS LOGIC ---
     function markAsPrinted(ids) {
         ids.forEach(id => {
-            // 1. Update Table Icon
             const icon = document.getElementById('check-' + id);
             if(icon) icon.className = "bi bi-check-circle-fill text-success check-circle";
-            
-            // 2. Update Modal List (The Fix)
             updateModalListStatus(id, true);
         });
-
-        // 3. Send to Backend
-        fetch("{% url 'update_print_status' %}", {
-            method: "POST",
-            headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" },
-            body: JSON.stringify({ ids: ids, status: true })
-        });
+        fetch("{% url 'update_print_status' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids, status: true }) });
     }
-
     function togglePrintedStatus(id) {
         const icon = document.getElementById('check-' + id);
-        const isCurrentlyPrinted = icon.classList.contains('bi-check-circle-fill');
-        const newStatus = !isCurrentlyPrinted;
-
-        // 1. UI Toggle Table Icon
+        const newStatus = !icon.classList.contains('bi-check-circle-fill');
         icon.className = newStatus ? "bi bi-check-circle-fill text-success check-circle" : "bi bi-circle text-secondary check-circle";
-
-        // 2. UI Toggle Modal List (The Fix)
         updateModalListStatus(id, newStatus);
-
-        // 3. Backend Toggle
-        fetch("{% url 'update_print_status' %}", {
-            method: "POST",
-            headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" },
-            body: JSON.stringify({ ids: [id], status: newStatus })
-        });
+        fetch("{% url 'update_print_status' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ ids: [id], status: newStatus }) });
     }
-
-    // --- PRINTING LOGIC ---
-    let selectedIds = new Set();
-    function toggleSelection(el) {
-        const checkbox = el.querySelector('input');
-        const id = checkbox.value;
-        if (selectedIds.has(id)) { selectedIds.delete(id); el.classList.remove('selected'); checkbox.checked = false; } 
-        else { 
-            if(selectedIds.size >= 4) { alert("Maximum 4 folders allowed per print."); return; }
-            selectedIds.add(id); el.classList.add('selected'); checkbox.checked = true; 
-        }
-        document.getElementById('selectionCount').innerText = `${selectedIds.size} selected`;
-    }
-    document.getElementById('printSearch').addEventListener('input', function() {
-        const val = this.value.toLowerCase();
-        document.querySelectorAll('.selection-item').forEach(item => { item.style.display = item.getAttribute('data-title').includes(val) ? 'flex' : 'none'; });
-    });
-
-    let sortOrder = 'desc'; 
-    function sortSelectionByDate() {
-        const container = document.getElementById('selectionListContainer');
-        const items = Array.from(container.children);
-        const btnIcon = document.querySelector('#sortBtn i');
-        sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
-        items.sort((a, b) => {
-            const dateA = a.getAttribute('data-date') || '';
-            const dateB = b.getAttribute('data-date') || '';
-            return sortOrder === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
-        });
-        btnIcon.className = sortOrder === 'asc' ? 'bi bi-sort-up' : 'bi bi-sort-down';
-        items.forEach(item => container.appendChild(item));
-    }
-
-    function proceedToPreview() {
-        const container = document.getElementById('previewGridContainer');
-        container.innerHTML = ''; 
-        if (selectedIds.size === 0) { alert("Please select at least one folder."); return; }
-        
-        container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`;
-        
-        selectedIds.forEach(id => {
-            const sourceCard = document.getElementById('print-card-' + id);
-            if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); }
-        });
-        bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide();
-        new bootstrap.Modal(document.getElementById('printPreviewModal')).show();
-    }
-    
-    function prepareSinglePrint(id) {
-        const modal = new bootstrap.Modal(document.getElementById('previewModal' + id));
-        modal.show();
-    }
-
-    function printFinalGrid() {
-        markAsPrinted(Array.from(selectedIds)); // This updates backend
-        const printContent = document.getElementById('previewGridContainer').innerHTML;
-        const count = selectedIds.size;
-        const gridClass = count === 1 ? 'grid-1' : 'grid-4';
-        const originalContent = document.body.innerHTML;
-        document.body.innerHTML = `<div id="finalPrintContainer" class="${gridClass}">${printContent}</div>`;
-        window.print();
-        setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500);
-    }
-
-    function printDiv(divId, envId) {
-        markAsPrinted([envId]); // This updates backend
-        const content = document.getElementById(divId).innerHTML;
-        document.body.innerHTML = `<div id="finalPrintContainer" class="grid-1"><div class="print-card" style="width:100%;">${content}</div></div>`;
-        window.print();
-        setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500);
-    }
-
-    // --- STANDARD FORM FUNCTIONS ---
     function addRow() { document.getElementById('content-rows').insertAdjacentHTML('beforeend', `<div class="row g-2 mb-2 content-row"><div class="col-md-6">${getDropdownHTML()}</div><div class="col-md-2"><input type="number" name="pages[]" class="form-control" value="1"></div><div class="col-md-4"><input type="date" name="date[]" class="form-control"></div></div>`); }
     function addMetaRow(id) { document.getElementById(id).insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`); }
     function addEditRow(id) { document.getElementById('edit-content-rows-' + id).insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2"><div class="col-6">${getDropdownHTML()}</div><div class="col-2"><input type="number" name="pages[]" class="form-control form-control-sm"></div><div class="col-4"><input type="date" name="date[]" class="form-control form-control-sm"></div></div>`); }
-    
-    function resetForm() {
-        const form = document.getElementById('addEnvelopeForm');
-        form.reset();
-        document.getElementById('content-rows').innerHTML = "";
-        addRow();
-        document.getElementById('meta-rows-container').innerHTML = `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`;
-    }
-
+    function resetForm() { const form = document.getElementById('addEnvelopeForm'); form.reset(); document.getElementById('content-rows').innerHTML = ""; addRow(); document.getElementById('meta-rows-container').innerHTML = `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`; }
     function showDropdown(input) { const wrapper = input.closest('.autocomplete-wrapper'); wrapper.querySelector('.autocomplete-items').style.display = 'block'; }
     function hideDropdown(input) { setTimeout(() => { const wrapper = input.closest('.autocomplete-wrapper'); if(wrapper) wrapper.querySelector('.autocomplete-items').style.display = 'none'; }, 200); }
     function toggleDropdown(span) { const wrapper = span.closest('.autocomplete-wrapper'); wrapper.querySelector('input').focus(); }
     function selectItem(span) { const wrapper = span.closest('.autocomplete-wrapper'); wrapper.querySelector('input').value = span.innerText; }
-    
     function openAddDocModal() { new bootstrap.Modal(document.getElementById('addNewDocTypeModal')).show(); }
-    function saveNewDocType() {
-        const name = document.getElementById('newDocTypeName').value;
-        if(!name) return;
-        fetch("{% url 'add_document_type' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ name: name }) })
-        .then(response => response.json()).then(data => {
-            if(data.success) {
-                globalDocTypes.push({id: data.id, name: data.name});
-                globalDocTypes.sort((a,b) => a.name.localeCompare(b.name));
-                refreshAllDropdowns();
-                bootstrap.Modal.getInstance(document.getElementById('addNewDocTypeModal')).hide();
-                document.getElementById('newDocTypeName').value = "";
-            }
-        });
-    }
-    function deleteDocType(id, btn) {
-        if(!confirm("Delete this document suggestion permanently?")) return;
-        fetch("{% url 'delete_document_type' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ id: id }) })
-        .then(response => response.json()).then(data => {
-            if(data.success) {
-                globalDocTypes = globalDocTypes.filter(doc => doc.id != id);
-                refreshAllDropdowns();
-            }
-        });
-    }
-    function refreshAllDropdowns() {
-        document.querySelectorAll('.autocomplete-items').forEach(list => {
-            list.innerHTML = "";
-            globalDocTypes.forEach(doc => { list.insertAdjacentHTML('beforeend', `<div class="autocomplete-item"><span onmousedown="selectItem(this)">${doc.name}</span><span class="delete-doc-btn" onmousedown="deleteDocType('${doc.id}', this)">🗑️</span></div>`); });
-            list.insertAdjacentHTML('beforeend', `<div class="autocomplete-add-btn" onmousedown="openAddDocModal()">+ Add New Document</div>`);
-        });
-    }
-
+    function saveNewDocType() { const name = document.getElementById('newDocTypeName').value; if(!name) return; fetch("{% url 'add_document_type' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ name: name }) }).then(response => response.json()).then(data => { if(data.success) { globalDocTypes.push({id: data.id, name: data.name}); globalDocTypes.sort((a,b) => a.name.localeCompare(b.name)); refreshAllDropdowns(); bootstrap.Modal.getInstance(document.getElementById('addNewDocTypeModal')).hide(); document.getElementById('newDocTypeName').value = ""; } }); }
+    function deleteDocType(id, btn) { if(!confirm("Delete this document suggestion permanently?")) return; fetch("{% url 'delete_document_type' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ id: id }) }).then(response => response.json()).then(data => { if(data.success) { globalDocTypes = globalDocTypes.filter(doc => doc.id != id); refreshAllDropdowns(); } }); }
+    function refreshAllDropdowns() { document.querySelectorAll('.autocomplete-items').forEach(list => { list.innerHTML = ""; globalDocTypes.forEach(doc => { list.insertAdjacentHTML('beforeend', `<div class="autocomplete-item"><span onmousedown="selectItem(this)">${doc.name}</span><span class="delete-doc-btn" onmousedown="deleteDocType('${doc.id}', this)">🗑️</span></div>`); }); list.insertAdjacentHTML('beforeend', `<div class="autocomplete-add-btn" onmousedown="openAddDocModal()">+ Add New Document</div>`); }); }
+    let selectedIds = new Set();
+    function toggleSelection(el) { const checkbox = el.querySelector('input'); const id = checkbox.value; if (selectedIds.has(id)) { selectedIds.delete(id); el.classList.remove('selected'); checkbox.checked = false; } else { if(selectedIds.size >= 4) { alert("Maximum 4 folders allowed per print."); return; } selectedIds.add(id); el.classList.add('selected'); checkbox.checked = true; } document.getElementById('selectionCount').innerText = `${selectedIds.size} selected`; }
+    let sortOrder = 'desc'; 
+    function sortSelectionByDate() { const container = document.getElementById('selectionListContainer'); const items = Array.from(container.children); const btnIcon = document.querySelector('#sortBtn i'); sortOrder = sortOrder === 'desc' ? 'asc' : 'desc'; items.sort((a, b) => { const dateA = a.getAttribute('data-date') || ''; const dateB = b.getAttribute('data-date') || ''; return sortOrder === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA); }); btnIcon.className = sortOrder === 'asc' ? 'bi bi-sort-up' : 'bi bi-sort-down'; items.forEach(item => container.appendChild(item)); }
+    function proceedToPreview() { const container = document.getElementById('previewGridContainer'); container.innerHTML = ''; if (selectedIds.size === 0) { alert("Please select at least one folder."); return; } container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`; selectedIds.forEach(id => { const sourceCard = document.getElementById('print-card-' + id); if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); } }); bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide(); new bootstrap.Modal(document.getElementById('printPreviewModal')).show(); }
+    function printFinalGrid() { markAsPrinted(Array.from(selectedIds)); const printContent = document.getElementById('previewGridContainer').innerHTML; const count = selectedIds.size; const gridClass = count === 1 ? 'grid-1' : 'grid-4'; const originalContent = document.body.innerHTML; document.body.innerHTML = `<div id="finalPrintContainer" class="${gridClass}">${printContent}</div>`; window.print(); setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500); }
+    function printDiv(divId, envId) { markAsPrinted([envId]); const content = document.getElementById(divId).innerHTML; document.body.innerHTML = `<div id="finalPrintContainer" class="grid-1"><div class="print-card" style="width:100%;">${content}</div></div>`; window.print(); setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500); }
     function closeAllPopups() { document.querySelectorAll('.content-popup').forEach(el => el.style.display = 'none'); }
     function togglePopup(id, e) { e.stopPropagation(); let el = document.getElementById(id); let vis = el.style.display === 'block'; closeAllPopups(); if(!vis) el.style.display='block'; }
     window.onclick = e => { if(!e.target.closest('.more-badge-container')) closeAllPopups(); };
