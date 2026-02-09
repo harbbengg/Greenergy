@@ -7,89 +7,26 @@
     <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
     
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        
-        #wrapper { display: flex; width: 100%; align-items: stretch; transition: all 0.3s; }
-        #sidebar-wrapper { min-width: 250px; max-width: 250px; background-color: #e9f5e9; border-right: 1px solid #c3e6cb; min-height: 100vh; position: fixed; height: 100%; z-index: 1000; overflow-y: auto; }
-        #page-content-wrapper { width: calc(100% - 250px); margin-left: 250px; padding: 20px; transition: all 0.3s; }
-        #wrapper.toggled #sidebar-wrapper { margin-left: -250px; }
-        #wrapper.toggled #page-content-wrapper { margin-left: 0; width: 100%; }
-        
-        /* UI ELEMENTS */
-        .sidebar-item-container { padding: 10px 15px; color: #333; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .sidebar-item-container:hover, .sidebar-item-container.active { background-color: #d4edda; border-left: 4px solid #28a745; color: #155724; }
-        .sidebar-link { text-decoration: none; color: inherit; font-weight: 500; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sidebar-actions { opacity: 0; transition: opacity 0.2s; font-size: 0.9rem; min-width: 45px; text-align: right; }
-        .sidebar-item-container:hover .sidebar-actions { opacity: 1; }
-        
-        /* TABLE LAYOUT FIXED */
+        /* INLINE OVERRIDES FOR SPECIFIC LAYOUT REQUESTS */
         .custom-table { table-layout: fixed; width: 100%; }
-        .custom-table thead th { background-color: #6bcd82 !important; color: #000; border-bottom: 2px solid #ccc; font-size: 0.9rem; vertical-align: middle; }
-        .custom-table td { vertical-align: middle; }
-
-        .more-badge { background-color: #e9ecef; color: #198754; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; cursor: pointer; font-weight: bold; border: 1px solid #c3e6cb; white-space: nowrap; display: inline-block; transition: 0.2s; }
-        .more-badge:hover { background-color: #198754; color: white; }
-        .content-popup { display: none; position: absolute; background: white; border: 1px solid #999; padding: 15px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; min-width: 400px; top: 100%; left: 0; }
-        .btn-icon { border: none; background: transparent; padding: 5px; transition: transform 0.2s; }
-        .btn-icon:hover { transform: scale(1.2); }
-        .search-container { position: relative; width: 100%; max-width: 600px; }
-        .search-clear-btn { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #999; display: none; }
-        .selection-list { max-height: 400px; overflow-y: auto; background: #eee; border-radius: 8px; padding: 10px; }
-        .selection-item { background: white; border-radius: 25px; padding: 8px 15px; margin-bottom: 8px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
-        .selection-item:hover { border-color: #198754; }
-        .selection-item.selected { background-color: #d1e7dd; border-color: #198754; }
-
-        /* AUTOCOMPLETE CSS */
-        .autocomplete-wrapper { position: relative; width: 100%; }
-        .autocomplete-items { position: absolute; border: 1px solid #d4d4d4; border-bottom: none; border-top: none; z-index: 99; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto; background-color: #fff; display: none; border-radius: 0 0 5px 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .autocomplete-item { padding: 8px 10px; cursor: pointer; background-color: #fff; border-bottom: 1px solid #d4d4d4; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
-        .autocomplete-item:hover { background-color: #e9ecef; }
-        .autocomplete-add-btn { padding: 10px; cursor: pointer; background-color: #d1e7dd; color: #0f5132; font-weight: bold; border-bottom: 1px solid #d4d4d4; text-align: center; }
-        .autocomplete-add-btn:hover { background-color: #badbcc; }
-        .input-group-text { background: white; border-left: 0; cursor: pointer; }
-        .delete-doc-btn { color: #dc3545; cursor: pointer; font-size: 0.9rem; padding: 2px 6px; border-radius: 4px; transition: 0.2s; }
-        .delete-doc-btn:hover { background-color: #f8d7da; color: #a71d2a; }
-
-        /* ACTIVITY LIST */
-        .activity-item { padding: 8px 0; border-bottom: 1px solid #eee; }
-        .activity-user { font-weight: bold; color: #198754; font-size: 0.9rem; }
-        .activity-time { font-size: 0.75rem; color: #888; float: right; }
-
-        @media print {
-            body { background-color: white !important; margin: 0; padding: 0; }
-            #wrapper { display: none !important; }
-            .modal { display: none !important; }
-            
-            #finalPrintContainer { 
-                display: grid !important; 
-                gap: 20px; 
-                width: 100%; 
-                visibility: visible !important; 
-                position: absolute; top: 0; left: 0;
-                padding: 20px;
-            }
-            
-            /* DYNAMIC GRID CLASSES */
-            .grid-1 { grid-template-columns: 1fr; } /* Full Width */
-            .grid-4 { grid-template-columns: 1fr 1fr; } /* 2x2 Grid */
-
-            .print-card { 
-                border: 2px solid #000; padding: 15px; 
-                break-inside: avoid; page-break-inside: avoid; 
-                background: white; height: 100%;
-                display: flex;
-                flex-direction: column;
-            }
-            .print-header { text-align: center; border-bottom: 2px solid #198754; margin-bottom: 10px; padding-bottom: 5px; }
-            .print-title { color: #198754 !important; font-weight: 900; font-size: 16px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
-            .meta-box { background-color: #f8f9fa !important; border: 1px solid #ddd; display: flex; margin-bottom: 5px; }
-            .meta-col { flex: 1; border-right: 1px solid #ddd; padding: 5px; text-align: center; }
-            .meta-col:last-child { border-right: none; }
-            .meta-label { font-size: 9px; font-weight: bold; color: #666; text-transform: uppercase; display: block; margin-bottom: 2px; }
-            .meta-value { font-size: 11px; font-weight: 900; color: #000; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Action Column Layout */
+        .action-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px; /* Space between icons */
         }
+        
+        /* Printed Checkbox Style */
+        .check-circle { cursor: pointer; transition: transform 0.2s; font-size: 1.2rem; }
+        .check-circle:hover { transform: scale(1.2); }
+
+        /* Print Selection List - Printed Indicator */
+        .printed-indicator { font-size: 0.8rem; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -133,7 +70,7 @@
                         <th class="text-center" style="width: 50px;">Copies</th>
                         <th class="text-center" style="width: 80px;">Date</th>
                         <th class="text-center" style="width: 45px;">D #</th>
-                        <th class="text-center" style="width: 120px;">Action</th>
+                        <th class="text-center" style="width: 160px;">Action</th> 
                     </tr>
                 </thead>
                 <tbody>
@@ -141,12 +78,15 @@
                     <tr>
                         <td class="align-middle bg-light">
                             <div class="d-flex align-items-start justify-content-between w-100 position-relative">
-                                <div class="fw-bold text-success me-2" style="flex: 1 1 auto; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; min-width: 0;">
+                                <div class="fw-bold text-success me-2" style="flex: 1; word-break: break-word; white-space: normal; line-height: 1.2;">
                                     {{ env.title }}
                                 </div>
+                                
                                 {% if env.meta_details.exists %}
-                                    <div class="position-relative more-badge-container flex-shrink-0">
-                                        <span class="more-badge" onclick="togglePopup('details-popup-{{ env.id }}', event)">Details ℹ️</span>
+                                    <div class="position-relative more-badge-container flex-shrink-0 ms-1">
+                                        <span class="more-badge" onclick="togglePopup('details-popup-{{ env.id }}', event)">
+                                            Details ℹ️
+                                        </span>
                                         <div id="details-popup-{{ env.id }}" class="content-popup text-start">
                                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
                                                 <h6 class="text-success fw-bold m-0">Project Details</h6>
@@ -165,7 +105,9 @@
                                 {% endif %}
                             </div>
                         </td>
+
                         <td class="align-middle text-center small fw-bold text-secondary">{{ env.region.name }}</td>
+
                         <td class="p-2 align-middle">
                             <div class="d-flex justify-content-between align-items-center w-100 position-relative">
                                 <span class="text-dark text-truncate me-2" style="max-width: 65%;">{% if env.documents.first %}• {{ env.documents.first.content_context }}{% endif %}</span>
@@ -194,6 +136,7 @@
                                 {% endif %}
                             </div>
                         </td>
+
                         <td class="align-middle text-center small fw-bold text-dark">{% with env.meta_details.first as m %}{{ m.sales_name|default:"-" }}{% endwith %}</td>
                         <td class="p-0 text-center align-middle">
                             <div class="py-2">{% if env.documents.first %}{{ env.documents.first.num_pages }}{% endif %}</div>
@@ -201,13 +144,24 @@
                         </td>
                         <td class="align-middle text-center small">{% with env.documents.first as first_doc %}{{ first_doc.date_notarized|default:"N/A" }}{% endwith %}</td>
                         <td class="align-middle text-center small fw-bold text-dark">{% with env.meta_details.first as m %}{{ m.door_number|default:"-" }}{% endwith %}</td>
+                        
                         <td class="align-middle text-center bg-light">
-                            <button class="btn-icon text-dark" data-bs-toggle="modal" data-bs-target="#previewModal{{ env.id }}"><i class="bi bi-printer-fill fs-5"></i></button>
-                            <button class="btn-icon text-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ env.id }}"><i class="bi bi-pencil-square fs-5"></i></button>
-                            <button class="btn-icon text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ env.id }}"><i class="bi bi-trash-fill fs-5"></i></button>
+                            <div class="action-cell">
+                                {% if env.is_printed %}
+                                    <i class="bi bi-check-circle-fill text-success check-circle" id="check-{{ env.id }}" onclick="togglePrintedStatus({{ env.id }})" title="Mark as Unprinted"></i>
+                                {% else %}
+                                    <i class="bi bi-circle text-secondary check-circle" id="check-{{ env.id }}" onclick="togglePrintedStatus({{ env.id }})" title="Mark as Printed"></i>
+                                {% endif %}
+                                
+                                <div class="vr"></div>
+
+                                <button class="btn-icon text-dark" onclick="prepareSinglePrint({{ env.id }})" title="Print Folder"><i class="bi bi-printer-fill fs-5"></i></button>
+                                <button class="btn-icon text-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ env.id }}" title="Edit Folder"><i class="bi bi-pencil-square fs-5"></i></button>
+                                <button class="btn-icon text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ env.id }}" title="Delete Folder"><i class="bi bi-trash-fill fs-5"></i></button>
+                            </div>
                         </td>
                     </tr>
-                    {% empty %}<tr><td colspan="8" class="text-center py-5 text-muted">No folders found.</td></tr>{% endfor %}
+                    {% empty %}<tr><td colspan="9" class="text-center py-5 text-muted">No folders found.</td></tr>{% endfor %}
                 </tbody>
             </table>
         </div>
@@ -313,26 +267,27 @@
         </form>
     </div>
 </div>
-<div class="modal fade" id="previewModal{{ env.id }}" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title">Preview</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body bg-light"><div id="printSection{{ env.id }}" class="border p-4 bg-white text-start"><div class="text-center mb-4"><h5 class="text-success fw-bold mb-2">GREENERGY</h5><hr class="border-success"></div><div class="fw-bold text-center text-uppercase mb-2 fs-4">{{ env.title }}</div>{% for meta in env.meta_details.all %}<div class="mb-4 border-bottom pb-3"><div class="text-center text-muted fw-bold mb-2">{{ meta.project_entity }}</div><div class="d-flex justify-content-between text-center border py-2 bg-light"><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">REGION</div><div class="fw-bold">{{ env.region.name }}</div></div><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">SALES</div><div class="fw-bold">{{ meta.sales_name }}</div></div><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">DOOR</div><div class="fw-bold">{{ meta.door_number }}</div></div><div class="px-1 flex-fill"><div class="small text-secondary fw-bold">DATE</div><div class="fw-bold">{% with env.documents.first as d %}{{ d.date_notarized|default:"-" }}{% endwith %}</div></div></div></div>{% endfor %}<table class="table table-sm table-bordered mt-3"><thead class="table-light"><tr><th>Content</th><th class="text-end">Pages</th><th class="text-end">Date</th></tr></thead><tbody>{% for doc in env.documents.all %}<tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"N/A" }}</td></tr>{% endfor %}</tbody></table></div></div><div class="modal-footer"><button type="button" class="btn btn-primary fw-bold" onclick="printDiv('printSection{{ env.id }}')">🖨️ Print</button></div></div></div></div>
+<div class="modal fade" id="previewModal{{ env.id }}" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title">Preview</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body bg-light"><div id="printSection{{ env.id }}" class="border p-4 bg-white text-start"><div class="text-center mb-4"><h5 class="text-success fw-bold mb-2">GREENENERGY</h5><hr class="border-success"></div><div class="fw-bold text-center text-uppercase mb-2 fs-4">{{ env.title }}</div>{% for meta in env.meta_details.all %}<div class="mb-4 border-bottom pb-3"><div class="text-center text-muted fw-bold mb-2">{{ meta.project_entity }}</div><div class="d-flex justify-content-between text-center border py-2 bg-light"><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">REGION</div><div class="fw-bold">{{ env.region.name }}</div></div><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">SALES</div><div class="fw-bold">{{ meta.sales_name }}</div></div><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">DOOR</div><div class="fw-bold">{{ meta.door_number }}</div></div><div class="px-1 flex-fill"><div class="small text-secondary fw-bold">DATE</div><div class="fw-bold">{% with env.documents.first as d %}{{ d.date_notarized|default:"-" }}{% endwith %}</div></div></div></div>{% endfor %}<table class="table table-sm table-bordered mt-3"><thead class="table-light"><tr><th>Content</th><th class="text-end">Pages</th><th class="text-end">Date</th></tr></thead><tbody>{% for doc in env.documents.all %}<tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"N/A" }}</td></tr>{% endfor %}</tbody></table></div></div><div class="modal-footer"><button type="button" class="btn btn-primary fw-bold" onclick="printDiv('printSection{{ env.id }}', {{ env.id }})">🖨️ Print</button></div></div></div></div>
 <div class="modal fade" id="deleteModal{{ env.id }}" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content"><div class="modal-header bg-danger text-white"><h5 class="modal-title">Delete?</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><p>Delete <strong>{{ env.title }}</strong>?</p></div><div class="modal-footer justify-content-center"><a href="{% url 'delete_envelope' env.id %}" class="btn btn-danger w-100">Yes, Delete It</a></div></div></div></div>
 {% endfor %}
 
-<div id="hiddenAllCardsSource" style="display: none;">{% for env in envelopes %}<div class="print-card" id="print-card-{{ env.id }}"><div class="print-header"><h5 class="print-title">GREENERGY</h5></div><div class="fw-bold text-center text-uppercase mb-2" style="font-size: 18px; line-height: 1.2;">{{ env.title }}</div>{% for meta in env.meta_details.all %}<div class="mb-2 border-bottom pb-2"><div class="text-center small text-muted fw-bold">{{ meta.project_entity }}</div><div class="meta-box mt-1"><div class="meta-col"><span class="meta-label">REGION</span><span class="meta-value">{{ env.region.name }}</span></div><div class="meta-col"><span class="meta-label">SALES REP</span><span class="meta-value">{{ meta.sales_name|default:"-" }}</span></div><div class="meta-col"><span class="meta-label">DOOR #</span><span class="meta-value">{{ meta.door_number|default:"-" }}</span></div><div class="meta-col"><span class="meta-label">DATE</span><span class="meta-value">{% with env.documents.first as doc %}{{ doc.date_notarized|default:"-" }}{% endwith %}</span></div></div></div>{% endfor %}<table class="table table-sm table-bordered mt-2 mb-0" style="font-size: 12px;"><thead class="table-light"><tr><th>Content / Item</th><th class="text-end" style="width: 40px;">Cp</th><th class="text-end" style="width: 70px;">Date</th></tr></thead><tbody>{% for doc in env.documents.all %}<tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"-" }}</td></tr>{% endfor %}<tr class="fw-bold bg-light"><td>TOTAL PAGES</td><td class="text-end">{{ env.total_pages }}</td><td></td></tr></tbody></table></div>{% endfor %}</div>
+<div id="hiddenAllCardsSource" style="display: none;">{% for env in envelopes %}<div class="print-card" id="print-card-{{ env.id }}"><div class="print-header"><h5 class="print-title">GREENENERGY</h5></div><div class="fw-bold text-center text-uppercase mb-2" style="font-size: 18px; line-height: 1.2;">{{ env.title }}</div>{% for meta in env.meta_details.all %}<div class="mb-2 border-bottom pb-2"><div class="text-center small text-muted fw-bold">{{ meta.project_entity }}</div><div class="meta-box mt-1"><div class="meta-col"><span class="meta-label">REGION</span><span class="meta-value">{{ env.region.name }}</span></div><div class="meta-col"><span class="meta-label">SALES REP</span><span class="meta-value">{{ meta.sales_name|default:"-" }}</span></div><div class="meta-col"><span class="meta-label">DOOR #</span><span class="meta-value">{{ meta.door_number|default:"-" }}</span></div><div class="meta-col"><span class="meta-label">DATE</span><span class="meta-value">{% with env.documents.first as doc %}{{ doc.date_notarized|default:"-" }}{% endwith %}</span></div></div></div>{% endfor %}<table class="table table-sm table-bordered mt-2 mb-0" style="font-size: 12px;"><thead class="table-light"><tr><th>Content / Item</th><th class="text-end" style="width: 40px;">Cp</th><th class="text-end" style="width: 70px;">Date</th></tr></thead><tbody>{% for doc in env.documents.all %}<tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"-" }}</td></tr>{% endfor %}<tr class="fw-bold bg-light"><td>TOTAL PAGES</td><td class="text-end">{{ env.total_pages }}</td><td></td></tr></tbody></table></div>{% endfor %}</div>
 
 <div class="modal fade" id="printSelectionModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header border-0 pb-0"><div class="w-100 text-center"><h5 class="fw-bold">Print</h5></div></div><div class="modal-body">
     <input type="text" id="printSearch" class="form-control rounded-pill mb-3 text-center fw-bold" placeholder="Search Title">
+    <div class="d-flex justify-content-between align-items-center mb-2 px-2"><span class="small fw-bold" id="sortLabel" style="cursor: pointer;" onclick="sortSelectionByDate()">Sort by: Date</span><button id="sortBtn" class="btn btn-sm btn-link text-dark p-0" onclick="sortSelectionByDate()"><i class="bi bi-sort-down"></i></button></div>
     
-    <div class="d-flex justify-content-between align-items-center mb-2 px-2">
-        <span class="small fw-bold" id="sortLabel" style="cursor: pointer;" onclick="sortSelectionByDate()">Sort by: Date</span>
-        <button id="sortBtn" class="btn btn-sm btn-link text-dark p-0" onclick="sortSelectionByDate()"><i class="bi bi-sort-down"></i></button>
-    </div>
-
     <div class="selection-list" id="selectionListContainer">
         {% for env in envelopes %}
         <div class="selection-item" data-title="{{ env.title|lower }}" data-date="{% with env.documents.first as doc %}{{ doc.date_notarized|date:'Ymd' }}{% endwith %}" onclick="toggleSelection(this)">
             <input type="checkbox" class="form-check-input" value="{{ env.id }}">
             <div class="ms-2 flex-grow-1">
-                <div class="fw-bold">{{ env.title }}</div>
+                <div class="fw-bold d-flex align-items-center">
+                    {{ env.title }}
+                    {% if env.is_printed %}
+                        <span class="text-success printed-indicator ms-2">✅ Printed</span>
+                    {% endif %}
+                </div>
                 <div class="small text-muted">{% with env.documents.first as doc %}{{ doc.date_notarized|default:"No Date" }}{% endwith %}</div>
             </div>
         </div>
@@ -346,6 +301,7 @@
 <script>
     document.getElementById("menu-toggle").addEventListener("click", function(e) { e.preventDefault(); document.getElementById("wrapper").classList.toggle("toggled"); });
     
+    // --- GLOBAL DOC TYPES ---
     let globalDocTypes = [{% for dtype in doc_types %}{ id: "{{ dtype.id }}", name: "{{ dtype.name }}" },{% endfor %}];
     function getDropdownHTML(value = '') {
         let listItems = globalDocTypes.map(doc => `<div class="autocomplete-item"><span onmousedown="selectItem(this)">${doc.name}</span><span class="delete-doc-btn" onmousedown="deleteDocType('${doc.id}', this)">🗑️</span></div>`).join('');
@@ -373,6 +329,136 @@
         clearBtn.onclick = () => { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); };
     });
 
+    // --- SYNCHRONIZE TABLE AND MODAL LIST ---
+    function updateModalListStatus(id, isPrinted) {
+        // Find the checkbox in the modal list with this ID
+        const checkbox = document.querySelector(`.selection-item input[value="${id}"]`);
+        if (checkbox) {
+            const container = checkbox.closest('.selection-item').querySelector('.fw-bold');
+            // Remove existing badge if any
+            const existingBadge = container.querySelector('.printed-indicator');
+            if (existingBadge) existingBadge.remove();
+
+            // Add badge if printed
+            if (isPrinted) {
+                const badge = document.createElement('span');
+                badge.className = 'text-success printed-indicator ms-2';
+                badge.innerText = '✅ Printed';
+                container.appendChild(badge);
+            }
+        }
+    }
+
+    // --- PRINT STATUS LOGIC ---
+    function markAsPrinted(ids) {
+        ids.forEach(id => {
+            // 1. Update Table Icon
+            const icon = document.getElementById('check-' + id);
+            if(icon) icon.className = "bi bi-check-circle-fill text-success check-circle";
+            
+            // 2. Update Modal List (The Fix)
+            updateModalListStatus(id, true);
+        });
+
+        // 3. Send to Backend
+        fetch("{% url 'update_print_status' %}", {
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: ids, status: true })
+        });
+    }
+
+    function togglePrintedStatus(id) {
+        const icon = document.getElementById('check-' + id);
+        const isCurrentlyPrinted = icon.classList.contains('bi-check-circle-fill');
+        const newStatus = !isCurrentlyPrinted;
+
+        // 1. UI Toggle Table Icon
+        icon.className = newStatus ? "bi bi-check-circle-fill text-success check-circle" : "bi bi-circle text-secondary check-circle";
+
+        // 2. UI Toggle Modal List (The Fix)
+        updateModalListStatus(id, newStatus);
+
+        // 3. Backend Toggle
+        fetch("{% url 'update_print_status' %}", {
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: [id], status: newStatus })
+        });
+    }
+
+    // --- PRINTING LOGIC ---
+    let selectedIds = new Set();
+    function toggleSelection(el) {
+        const checkbox = el.querySelector('input');
+        const id = checkbox.value;
+        if (selectedIds.has(id)) { selectedIds.delete(id); el.classList.remove('selected'); checkbox.checked = false; } 
+        else { 
+            if(selectedIds.size >= 4) { alert("Maximum 4 folders allowed per print."); return; }
+            selectedIds.add(id); el.classList.add('selected'); checkbox.checked = true; 
+        }
+        document.getElementById('selectionCount').innerText = `${selectedIds.size} selected`;
+    }
+    document.getElementById('printSearch').addEventListener('input', function() {
+        const val = this.value.toLowerCase();
+        document.querySelectorAll('.selection-item').forEach(item => { item.style.display = item.getAttribute('data-title').includes(val) ? 'flex' : 'none'; });
+    });
+
+    let sortOrder = 'desc'; 
+    function sortSelectionByDate() {
+        const container = document.getElementById('selectionListContainer');
+        const items = Array.from(container.children);
+        const btnIcon = document.querySelector('#sortBtn i');
+        sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+        items.sort((a, b) => {
+            const dateA = a.getAttribute('data-date') || '';
+            const dateB = b.getAttribute('data-date') || '';
+            return sortOrder === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
+        });
+        btnIcon.className = sortOrder === 'asc' ? 'bi bi-sort-up' : 'bi bi-sort-down';
+        items.forEach(item => container.appendChild(item));
+    }
+
+    function proceedToPreview() {
+        const container = document.getElementById('previewGridContainer');
+        container.innerHTML = ''; 
+        if (selectedIds.size === 0) { alert("Please select at least one folder."); return; }
+        
+        container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`;
+        
+        selectedIds.forEach(id => {
+            const sourceCard = document.getElementById('print-card-' + id);
+            if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); }
+        });
+        bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide();
+        new bootstrap.Modal(document.getElementById('printPreviewModal')).show();
+    }
+    
+    function prepareSinglePrint(id) {
+        const modal = new bootstrap.Modal(document.getElementById('previewModal' + id));
+        modal.show();
+    }
+
+    function printFinalGrid() {
+        markAsPrinted(Array.from(selectedIds)); // This updates backend
+        const printContent = document.getElementById('previewGridContainer').innerHTML;
+        const count = selectedIds.size;
+        const gridClass = count === 1 ? 'grid-1' : 'grid-4';
+        const originalContent = document.body.innerHTML;
+        document.body.innerHTML = `<div id="finalPrintContainer" class="${gridClass}">${printContent}</div>`;
+        window.print();
+        setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500);
+    }
+
+    function printDiv(divId, envId) {
+        markAsPrinted([envId]); // This updates backend
+        const content = document.getElementById(divId).innerHTML;
+        document.body.innerHTML = `<div id="finalPrintContainer" class="grid-1"><div class="print-card" style="width:100%;">${content}</div></div>`;
+        window.print();
+        setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500);
+    }
+
+    // --- STANDARD FORM FUNCTIONS ---
     function addRow() { document.getElementById('content-rows').insertAdjacentHTML('beforeend', `<div class="row g-2 mb-2 content-row"><div class="col-md-6">${getDropdownHTML()}</div><div class="col-md-2"><input type="number" name="pages[]" class="form-control" value="1"></div><div class="col-md-4"><input type="date" name="date[]" class="form-control"></div></div>`); }
     function addMetaRow(id) { document.getElementById(id).insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`); }
     function addEditRow(id) { document.getElementById('edit-content-rows-' + id).insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2"><div class="col-6">${getDropdownHTML()}</div><div class="col-2"><input type="number" name="pages[]" class="form-control form-control-sm"></div><div class="col-4"><input type="date" name="date[]" class="form-control form-control-sm"></div></div>`); }
@@ -423,75 +509,6 @@
         });
     }
 
-    let selectedIds = new Set();
-    function toggleSelection(el) {
-        const checkbox = el.querySelector('input');
-        const id = checkbox.value;
-        if (selectedIds.has(id)) { selectedIds.delete(id); el.classList.remove('selected'); checkbox.checked = false; } 
-        else { 
-            if(selectedIds.size >= 4) { alert("Maximum 4 folders allowed per print."); return; }
-            selectedIds.add(id); el.classList.add('selected'); checkbox.checked = true; 
-        }
-        document.getElementById('selectionCount').innerText = `${selectedIds.size} selected`;
-    }
-    document.getElementById('printSearch').addEventListener('input', function() {
-        const val = this.value.toLowerCase();
-        document.querySelectorAll('.selection-item').forEach(item => { item.style.display = item.getAttribute('data-title').includes(val) ? 'flex' : 'none'; });
-    });
-
-    // --- SORT TOGGLE LOGIC ---
-    let sortOrder = 'desc'; // Default newest first
-    function sortSelectionByDate() {
-        const container = document.getElementById('selectionListContainer');
-        const items = Array.from(container.children);
-        const btnIcon = document.querySelector('#sortBtn i');
-
-        // Toggle state
-        sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
-
-        items.sort((a, b) => {
-            const dateA = a.getAttribute('data-date') || '';
-            const dateB = b.getAttribute('data-date') || '';
-            // If date is empty, treat as oldest or newest depending on sort? 
-            // Standard string compare:
-            return sortOrder === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
-        });
-
-        // Update Icon
-        btnIcon.className = sortOrder === 'asc' ? 'bi bi-sort-up' : 'bi bi-sort-down';
-
-        items.forEach(item => container.appendChild(item));
-    }
-
-    function proceedToPreview() {
-        const container = document.getElementById('previewGridContainer');
-        container.innerHTML = ''; 
-        if (selectedIds.size === 0) { alert("Please select at least one folder."); return; }
-        
-        container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`;
-        
-        selectedIds.forEach(id => {
-            const sourceCard = document.getElementById('print-card-' + id);
-            if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); }
-        });
-        bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide();
-        new bootstrap.Modal(document.getElementById('printPreviewModal')).show();
-    }
-    function printFinalGrid() {
-        const printContent = document.getElementById('previewGridContainer').innerHTML;
-        const count = selectedIds.size;
-        const gridClass = count === 1 ? 'grid-1' : 'grid-4';
-        const originalContent = document.body.innerHTML;
-        document.body.innerHTML = `<div id="finalPrintContainer" class="${gridClass}">${printContent}</div>`;
-        window.print();
-        setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500);
-    }
-    function printDiv(divId) {
-        const content = document.getElementById(divId).innerHTML;
-        document.body.innerHTML = `<div id="finalPrintContainer" class="grid-1"><div class="print-card" style="width:100%;">${content}</div></div>`;
-        window.print();
-        location.reload(); 
-    }
     function closeAllPopups() { document.querySelectorAll('.content-popup').forEach(el => el.style.display = 'none'); }
     function togglePopup(id, e) { e.stopPropagation(); let el = document.getElementById(id); let vis = el.style.display === 'block'; closeAllPopups(); if(!vis) el.style.display='block'; }
     window.onclick = e => { if(!e.target.closest('.more-badge-container')) closeAllPopups(); };
