@@ -16,14 +16,16 @@
         .check-circle:hover { transform: scale(1.2); }
         .printed-indicator { font-size: 0.8rem; margin-left: 5px; }
         
-        /* Sortable Header Style - Making sure it looks clickable */
-        th.sortable { 
-            cursor: pointer !important; 
-            user-select: none; 
-            position: relative;
-            transition: background-color 0.2s;
-        }
+        /* Sortable Header Style */
+        th.sortable { cursor: pointer !important; user-select: none; position: relative; transition: background-color 0.2s; }
         th.sortable:hover { background-color: #d1e7dd !important; color: #0f5132; }
+
+        /* Print Modal Styles */
+        .selection-list { max-height: 400px; overflow-y: auto; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; }
+        .selection-item { background: white; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; align-items: center; cursor: pointer; border: 1px solid transparent; transition: 0.1s; }
+        .selection-item:hover { border-color: #198754; background-color: #f1f8f5; }
+        .selection-item.selected { background-color: #d1e7dd; border-color: #198754; }
+        .region-badge { font-size: 0.7rem; background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; margin-right: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -62,14 +64,12 @@
                     <tr>
                         <th class="text-center" style="width: 300px;">Folder Title</th>
                         <th class="text-center" style="width: 100px;">Region</th>
-                        <th class="text-center" style="width: 250px;">Contents</th>
+                        <th class="text-center" style="width: 250px;">Context / Contents</th>
                         <th class="text-center" style="width: 100px;">Sales Rep</th>
                         <th class="text-center" style="width: 50px;">Copies</th>
-                        
                         <th class="text-center sortable" style="width: 80px;" onclick="sortTableByDate()">
                             Date <i id="dateSortIcon" class="bi bi-arrow-down-up small ms-1"></i>
                         </th>
-                        
                         <th class="text-center" style="width: 45px;">D #</th>
                         <th class="text-center" style="width: 160px;">Action</th>
                     </tr>
@@ -205,33 +205,55 @@
         </form>
     </div>
 </div>
-<div class="modal fade" id="previewModal{{ env.id }}" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title">Preview</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body bg-light"><div id="printSection{{ env.id }}" class="border p-4 bg-white text-start"><div class="text-center mb-4"><h5 class="text-success fw-bold mb-2">GREENERGY</h5><hr class="border-success"></div><div class="fw-bold text-center text-uppercase mb-2 fs-4">{{ env.title }}</div>{% for meta in env.meta_details.all %}<div class="mb-4 border-bottom pb-3"><div class="text-center text-muted fw-bold mb-2">{{ meta.project_entity }}</div><div class="d-flex justify-content-between text-center border py-2 bg-light"><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">REGION</div><div class="fw-bold">{{ env.region.name }}</div></div><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">SALES</div><div class="fw-bold">{{ meta.sales_name }}</div></div><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">DOOR</div><div class="fw-bold">{{ meta.door_number }}</div></div><div class="px-1 flex-fill"><div class="small text-secondary fw-bold">DATE</div><div class="fw-bold">{% with env.documents.first as d %}{{ d.date_notarized|default:"-" }}{% endwith %}</div></div></div></div>{% endfor %}<table class="table table-sm table-bordered mt-3"><thead class="table-light"><tr><th>Content</th><th class="text-end">Pages</th><th class="text-end">Date</th></tr></thead><tbody>{% for doc in env.documents.all %}<tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"N/A" }}</td></tr>{% endfor %}</tbody></table></div></div><div class="modal-footer"><button type="button" class="btn btn-primary fw-bold" onclick="printDiv('printSection{{ env.id }}', {{ env.id }})">🖨️ Print</button></div></div></div></div>
+<div class="modal fade" id="previewModal{{ env.id }}" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title">Preview</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body bg-light"><div id="printSection{{ env.id }}" class="border p-4 bg-white text-start"><div class="text-center mb-4"><h5 class="text-success fw-bold mb-2">GREENENERGY</h5><hr class="border-success"></div><div class="fw-bold text-center text-uppercase mb-2 fs-4">{{ env.title }}</div>{% for meta in env.meta_details.all %}<div class="mb-4 border-bottom pb-3"><div class="text-center text-muted fw-bold mb-2">{{ meta.project_entity }}</div><div class="d-flex justify-content-between text-center border py-2 bg-light"><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">REGION</div><div class="fw-bold">{{ env.region.name }}</div></div><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">SALES</div><div class="fw-bold">{{ meta.sales_name }}</div></div><div class="px-1 border-end flex-fill"><div class="small text-secondary fw-bold">DOOR</div><div class="fw-bold">{{ meta.door_number }}</div></div><div class="px-1 flex-fill"><div class="small text-secondary fw-bold">DATE</div><div class="fw-bold">{% with env.documents.first as d %}{{ d.date_notarized|default:"-" }}{% endwith %}</div></div></div></div>{% endfor %}<table class="table table-sm table-bordered mt-3"><thead class="table-light"><tr><th>Content</th><th class="text-end">Pages</th><th class="text-end">Date</th></tr></thead><tbody>{% for doc in env.documents.all %}<tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"N/A" }}</td></tr>{% endfor %}</tbody></table></div></div><div class="modal-footer"><button type="button" class="btn btn-primary fw-bold" onclick="printDiv('printSection{{ env.id }}', {{ env.id }})">🖨️ Print</button></div></div></div></div>
 <div class="modal fade" id="deleteModal{{ env.id }}" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content"><div class="modal-header bg-danger text-white"><h5 class="modal-title">Delete?</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><p>Delete <strong>{{ env.title }}</strong>?</p></div><div class="modal-footer justify-content-center"><a href="{% url 'delete_envelope' env.id %}" class="btn btn-danger w-100">Yes, Delete It</a></div></div></div></div>
 {% endfor %}
 
-<div id="hiddenAllCardsSource" style="display: none;">{% for env in envelopes %}<div class="print-card" id="print-card-{{ env.id }}"><div class="print-header"><h5 class="print-title">GREENERGY</h5></div><div class="fw-bold text-center text-uppercase mb-2" style="font-size: 18px; line-height: 1.2;">{{ env.title }}</div>{% for meta in env.meta_details.all %}<div class="mb-2 border-bottom pb-2"><div class="text-center small text-muted fw-bold">{{ meta.project_entity }}</div><div class="meta-box mt-1"><div class="meta-col"><span class="meta-label">REGION</span><span class="meta-value">{{ env.region.name }}</span></div><div class="meta-col"><span class="meta-label">SALES REP</span><span class="meta-value">{{ meta.sales_name|default:"-" }}</span></div><div class="meta-col"><span class="meta-label">DOOR #</span><span class="meta-value">{{ meta.door_number|default:"-" }}</span></div><div class="meta-col"><span class="meta-label">DATE</span><span class="meta-value">{% with env.documents.first as doc %}{{ doc.date_notarized|default:"-" }}{% endwith %}</span></div></div></div>{% endfor %}<table class="table table-sm table-bordered mt-2 mb-0" style="font-size: 12px;"><thead class="table-light"><tr><th>Content</th><th class="text-end" style="width: 40px;">Pages</th><th class="text-end" style="width: 70px;">Date</th></tr></thead><tbody>{% for doc in env.documents.all %}<tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"-" }}</td></tr>{% endfor %}<tr class="fw-bold bg-light"><td>TOTAL PAGES</td><td class="text-end">{{ env.total_pages }}</td><td></td></tr></tbody></table></div>{% endfor %}</div>
+<div id="hiddenAllCardsSource" style="display: none;">{% for env in envelopes %}<div class="print-card" id="print-card-{{ env.id }}"><div class="print-header"><h5 class="print-title">GREENENERGY</h5></div><div class="fw-bold text-center text-uppercase mb-2" style="font-size: 18px; line-height: 1.2;">{{ env.title }}</div>{% for meta in env.meta_details.all %}<div class="mb-2 border-bottom pb-2"><div class="text-center small text-muted fw-bold">{{ meta.project_entity }}</div><div class="meta-box mt-1"><div class="meta-col"><span class="meta-label">REGION</span><span class="meta-value">{{ env.region.name }}</span></div><div class="meta-col"><span class="meta-label">SALES REP</span><span class="meta-value">{{ meta.sales_name|default:"-" }}</span></div><div class="meta-col"><span class="meta-label">DOOR #</span><span class="meta-value">{{ meta.door_number|default:"-" }}</span></div><div class="meta-col"><span class="meta-label">DATE</span><span class="meta-value">{% with env.documents.first as doc %}{{ doc.date_notarized|default:"-" }}{% endwith %}</span></div></div></div>{% endfor %}<table class="table table-sm table-bordered mt-2 mb-0" style="font-size: 12px;"><thead class="table-light"><tr><th>Content / Item</th><th class="text-end" style="width: 40px;">Cp</th><th class="text-end" style="width: 70px;">Date</th></tr></thead><tbody>{% for doc in env.documents.all %}<tr><td>{{ doc.content_context }}</td><td class="text-end">{{ doc.num_pages }}</td><td class="text-end">{{ doc.date_notarized|default:"-" }}</td></tr>{% endfor %}<tr class="fw-bold bg-light"><td>TOTAL PAGES</td><td class="text-end">{{ env.total_pages }}</td><td></td></tr></tbody></table></div>{% endfor %}</div>
 
 <div class="modal fade" id="printSelectionModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header border-0 pb-0"><div class="w-100 text-center"><h5 class="fw-bold">Print</h5></div></div><div class="modal-body">
-    <input type="text" id="printSearch" class="form-control rounded-pill mb-3 text-center fw-bold" placeholder="Search Title">
-    <div class="d-flex justify-content-between align-items-center mb-2 px-2"><span class="small fw-bold" id="sortLabel" style="cursor: pointer;" onclick="sortSelectionByDate()">Sort by: Date</span><button id="sortBtn" class="btn btn-sm btn-link text-dark p-0" onclick="sortSelectionByDate()"><i class="bi bi-sort-down"></i></button></div>
+    <div class="d-flex gap-2 mb-3 align-items-center">
+        <div class="position-relative flex-grow-1">
+            <input type="text" id="printSearch" class="form-control form-control-sm rounded-pill ps-4" placeholder="Search Title...">
+            <i class="bi bi-search position-absolute text-muted small" style="left: 10px; top: 50%; transform: translateY(-50%);"></i>
+        </div>
+        
+        <select id="printRegionFilter" class="form-select form-select-sm rounded-pill" style="width: auto; max-width: 150px;">
+            <option value="">All Regions</option>
+            {% for region in regions %}
+            <option value="{{ region.name|lower }}">{{ region.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button class="btn btn-outline-secondary btn-sm rounded-pill text-nowrap px-3" onclick="sortSelectionByDate()">
+            Date <i id="printSortDateIcon" class="bi bi-arrow-down-up small"></i>
+        </button>
+    </div>
+
     <div class="selection-list" id="selectionListContainer">
         {% for env in envelopes %}
-        <div class="selection-item" data-title="{{ env.title|lower }}" data-date="{% with env.documents.first as doc %}{{ doc.date_notarized|date:'Ymd' }}{% endwith %}" onclick="toggleSelection(this)">
+        <div class="selection-item" 
+             data-title="{{ env.title|lower }}" 
+             data-date="{% with env.documents.first as doc %}{{ doc.date_notarized|date:'Ymd' }}{% endwith %}"
+             data-region="{{ env.region.name|lower }}"
+             onclick="toggleSelection(this)">
             <input type="checkbox" class="form-check-input" value="{{ env.id }}">
-            <div class="ms-2 flex-grow-1">
-                <div class="fw-bold d-flex align-items-center">
-                    {{ env.title }}
-                    {% if env.is_printed %}
-                        <span class="text-success printed-indicator ms-2">✅ Printed</span>
-                    {% endif %}
+            <div class="ms-2 flex-grow-1 d-flex justify-content-between align-items-center">
+                <div style="flex: 1;">
+                    <div class="fw-bold d-flex align-items-center">
+                        {{ env.title }}
+                        {% if env.is_printed %}<span class="text-success printed-indicator ms-2">✅ Printed</span>{% endif %}
+                    </div>
+                    <div class="small text-muted">{% with env.documents.first as doc %}{{ doc.date_notarized|default:"No Date" }}{% endwith %}</div>
                 </div>
-                <div class="small text-muted">{% with env.documents.first as doc %}{{ doc.date_notarized|default:"No Date" }}{% endwith %}</div>
+                <span class="region-badge ms-2">{{ env.region.name }}</span>
             </div>
         </div>
         {% endfor %}
     </div>
     <div class="text-center mt-2 text-danger small fw-bold" id="selectionCount">0 selected</div>
 </div><div class="modal-footer border-0 justify-content-center"><button type="button" class="btn btn-danger rounded-pill px-4" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-success rounded-pill px-4" onclick="proceedToPreview()">Proceed to Preview</button></div></div></div></div>
+
 <div class="modal fade" id="printPreviewModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header bg-dark text-white"><h5 class="modal-title">Print Preview</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body bg-light"><div id="previewGridContainer" class="print-grid bg-white p-4 shadow-sm" style="max-width: 21cm; margin: 0 auto;"></div></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button><button type="button" class="btn btn-primary fw-bold px-5" onclick="printFinalGrid()">🖨️ Print Now</button></div></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -264,43 +286,34 @@
         clearBtn.onclick = () => { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); };
     });
 
-    // --- STRICT DATE VALIDATION (Prevents bad submission) ---
     function validateDates(form) {
         if(!form) form = document.getElementById('addEnvelopeForm');
         let dateInputs = form.querySelectorAll('input[type="date"]');
         for (let input of dateInputs) {
             if (input.value) {
                 const year = parseInt(input.value.split('-')[0]);
-                // Rule: Must be between 1900 and 2030
                 if (year < 1900 || year > 2030) {
                     alert("Invalid Date! Year must be between 1900 and 2030.");
                     input.focus();
-                    return false; // Stop form
+                    return false;
                 }
             }
         }
-        return true; // Proceed
+        return true;
     }
 
-    // --- SORTING LOGIC (With 3-Way Cycle) ---
-    let currentSortMode = 'default'; // Start at Default (Newest First from Server)
-
+    let currentSortMode = 'default'; 
     function sortTableByDate() {
         const tableBody = document.getElementById('tableBody');
         const rows = Array.from(tableBody.querySelectorAll('tr'));
         const icon = document.getElementById('dateSortIcon');
 
-        // Logic Cycle: Default -> Ascending (Old to New) -> Descending (New to Old) -> Default (Reload)
-        
         if (currentSortMode === 'default' || currentSortMode === 'desc') {
-            // 1. Switch to Oldest -> Newest (Ascending)
             currentSortMode = 'asc';
-            icon.className = 'bi bi-sort-down-alt text-primary small'; // Icon: 1-9 (Ascending)
-            
+            icon.className = 'bi bi-sort-down-alt text-primary small'; 
             rows.sort((a, b) => {
                 let dateA = a.getAttribute('data-date');
                 let dateB = b.getAttribute('data-date');
-                // N/A Logic: Force to bottom
                 const isInvalidA = !dateA || dateA === "0000-00-00" || dateA === "None";
                 const isInvalidB = !dateB || dateB === "0000-00-00" || dateB === "None";
                 if (isInvalidA && isInvalidB) return 0;
@@ -308,12 +321,9 @@
                 if (isInvalidB) return -1; 
                 return dateA.localeCompare(dateB);
             });
-
         } else if (currentSortMode === 'asc') {
-            // 2. Switch to Newest -> Oldest (Descending)
             currentSortMode = 'desc';
-            icon.className = 'bi bi-sort-up text-primary small'; // Icon: 9-1 (Descending)
-
+            icon.className = 'bi bi-sort-up text-primary small'; 
             rows.sort((a, b) => {
                 let dateA = a.getAttribute('data-date');
                 let dateB = b.getAttribute('data-date');
@@ -324,17 +334,51 @@
                 if (isInvalidB) return -1; 
                 return dateB.localeCompare(dateA);
             });
-
         } else {
-            // 3. Reset to Default
             location.reload();
             return;
         }
-        
         rows.forEach(row => tableBody.appendChild(row));
     }
 
-    // --- OTHER LOGIC (Synced) ---
+    // --- PRINT MODAL: FILTER LOGIC (SEARCH + REGION) ---
+    function filterPrintItems() {
+        const searchVal = document.getElementById('printSearch').value.toLowerCase();
+        const regionVal = document.getElementById('printRegionFilter').value.toLowerCase();
+        
+        document.querySelectorAll('.selection-item').forEach(item => {
+            const title = item.getAttribute('data-title');
+            const region = item.getAttribute('data-region');
+            
+            const matchesSearch = title.includes(searchVal);
+            const matchesRegion = regionVal === "" || region === regionVal;
+            
+            item.style.display = (matchesSearch && matchesRegion) ? 'flex' : 'none';
+        });
+    }
+
+    // Attach Listeners
+    document.getElementById('printSearch').addEventListener('input', filterPrintItems);
+    document.getElementById('printRegionFilter').addEventListener('change', filterPrintItems);
+
+    // --- PRINT MODAL: SORT DATE ---
+    let printDateSort = 'desc';
+    function sortSelectionByDate() {
+        const container = document.getElementById('selectionListContainer');
+        const items = Array.from(container.children);
+        const icon = document.getElementById('printSortDateIcon');
+        
+        printDateSort = printDateSort === 'desc' ? 'asc' : 'desc';
+        icon.className = printDateSort === 'asc' ? 'bi bi-sort-up' : 'bi bi-sort-down';
+
+        items.sort((a, b) => {
+            const dateA = a.getAttribute('data-date') || '';
+            const dateB = b.getAttribute('data-date') || '';
+            return printDateSort === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
+        });
+        items.forEach(item => container.appendChild(item));
+    }
+
     function updateModalListStatus(id, isPrinted) {
         const checkbox = document.querySelector(`.selection-item input[value="${id}"]`);
         if (checkbox) {
@@ -383,6 +427,7 @@
     function proceedToPreview() { const container = document.getElementById('previewGridContainer'); container.innerHTML = ''; if (selectedIds.size === 0) { alert("Please select at least one folder."); return; } container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`; selectedIds.forEach(id => { const sourceCard = document.getElementById('print-card-' + id); if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); } }); bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide(); new bootstrap.Modal(document.getElementById('printPreviewModal')).show(); }
     function printFinalGrid() { markAsPrinted(Array.from(selectedIds)); const printContent = document.getElementById('previewGridContainer').innerHTML; const count = selectedIds.size; const gridClass = count === 1 ? 'grid-1' : 'grid-4'; const originalContent = document.body.innerHTML; document.body.innerHTML = `<div id="finalPrintContainer" class="${gridClass}">${printContent}</div>`; window.print(); setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500); }
     function printDiv(divId, envId) { markAsPrinted([envId]); const content = document.getElementById(divId).innerHTML; document.body.innerHTML = `<div id="finalPrintContainer" class="grid-1"><div class="print-card" style="width:100%;">${content}</div></div>`; window.print(); setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500); }
+    function prepareSinglePrint(id) { const modal = new bootstrap.Modal(document.getElementById('previewModal' + id)); modal.show(); }
     function closeAllPopups() { document.querySelectorAll('.content-popup').forEach(el => el.style.display = 'none'); }
     function togglePopup(id, e) { e.stopPropagation(); let el = document.getElementById(id); let vis = el.style.display === 'block'; closeAllPopups(); if(!vis) el.style.display='block'; }
     window.onclick = e => { if(!e.target.closest('.more-badge-container')) closeAllPopups(); };
