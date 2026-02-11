@@ -16,7 +16,6 @@
         .check-circle:hover { transform: scale(1.2); }
         .printed-indicator { font-size: 0.8rem; margin-left: 5px; }
         
-        /* Sortable Header Style */
         th.sortable { cursor: pointer !important; user-select: none; position: relative; transition: background-color 0.2s; }
         th.sortable:hover { background-color: #d1e7dd !important; color: #0f5132; }
 
@@ -76,7 +75,7 @@
                 </thead>
                 <tbody id="tableBody">
                     {% for env in envelopes %}
-                    <tr data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'0000-00-00' }}{% endwith %}">
+                    <tr data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}">
                         <td class="align-middle bg-light">
                             <div class="d-flex align-items-start justify-content-between w-100 position-relative">
                                 <div class="fw-bold text-success me-2" style="flex: 1; word-break: break-word; white-space: normal; line-height: 1.2;">
@@ -234,8 +233,9 @@
         {% for env in envelopes %}
         <div class="selection-item" 
              data-title="{{ env.title|lower }}" 
-             data-date="{% with env.documents.first as doc %}{{ doc.date_notarized|date:'Ymd' }}{% endwith %}"
+             data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}"
              data-region="{{ env.region.name|lower }}"
+             data-index="{{ forloop.counter0 }}" 
              onclick="toggleSelection(this)">
             <input type="checkbox" class="form-check-input" value="{{ env.id }}">
             <div class="ms-2 flex-grow-1 d-flex justify-content-between align-items-center">
@@ -302,6 +302,7 @@
         return true;
     }
 
+    // --- MAIN TABLE SORTING (3-WAY) ---
     let currentSortMode = 'default'; 
     function sortTableByDate() {
         const tableBody = document.getElementById('tableBody');
@@ -314,8 +315,8 @@
             rows.sort((a, b) => {
                 let dateA = a.getAttribute('data-date');
                 let dateB = b.getAttribute('data-date');
-                const isInvalidA = !dateA || dateA === "0000-00-00" || dateA === "None";
-                const isInvalidB = !dateB || dateB === "0000-00-00" || dateB === "None";
+                const isInvalidA = !dateA || dateA === "" || dateA === "None";
+                const isInvalidB = !dateB || dateB === "" || dateB === "None";
                 if (isInvalidA && isInvalidB) return 0;
                 if (isInvalidA) return 1; 
                 if (isInvalidB) return -1; 
@@ -327,8 +328,8 @@
             rows.sort((a, b) => {
                 let dateA = a.getAttribute('data-date');
                 let dateB = b.getAttribute('data-date');
-                const isInvalidA = !dateA || dateA === "0000-00-00" || dateA === "None";
-                const isInvalidB = !dateB || dateB === "0000-00-00" || dateB === "None";
+                const isInvalidA = !dateA || dateA === "" || dateA === "None";
+                const isInvalidB = !dateB || dateB === "" || dateB === "None";
                 if (isInvalidA && isInvalidB) return 0;
                 if (isInvalidA) return 1; 
                 if (isInvalidB) return -1; 
@@ -361,21 +362,58 @@
     document.getElementById('printSearch').addEventListener('input', filterPrintItems);
     document.getElementById('printRegionFilter').addEventListener('change', filterPrintItems);
 
-    // --- PRINT MODAL: SORT DATE ---
-    let printDateSort = 'desc';
+    // --- PRINT MODAL: 3-WAY SORT DATE (FIXED) ---
+    let printSortState = 'default';
+
     function sortSelectionByDate() {
         const container = document.getElementById('selectionListContainer');
         const items = Array.from(container.children);
         const icon = document.getElementById('printSortDateIcon');
-        
-        printDateSort = printDateSort === 'desc' ? 'asc' : 'desc';
-        icon.className = printDateSort === 'asc' ? 'bi bi-sort-up' : 'bi bi-sort-down';
 
-        items.sort((a, b) => {
-            const dateA = a.getAttribute('data-date') || '';
-            const dateB = b.getAttribute('data-date') || '';
-            return printDateSort === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA);
-        });
+        // Cycle: Default -> Ascending (Old-New) -> Descending (New-Old) -> Default
+        if (printSortState === 'default' || printSortState === 'desc') {
+            // 1. Switch to Oldest -> Newest (Ascending)
+            printSortState = 'asc';
+            icon.className = 'bi bi-sort-down-alt small'; 
+            
+            items.sort((a, b) => {
+                let dateA = a.getAttribute('data-date');
+                let dateB = b.getAttribute('data-date');
+                // N/A Logic: Force to bottom
+                const isInvalidA = !dateA || dateA === "" || dateA === "None";
+                const isInvalidB = !dateB || dateB === "" || dateB === "None";
+                if (isInvalidA && isInvalidB) return 0;
+                if (isInvalidA) return 1; 
+                if (isInvalidB) return -1; 
+                return dateA.localeCompare(dateB);
+            });
+
+        } else if (printSortState === 'asc') {
+            // 2. Switch to Newest -> Oldest (Descending)
+            printSortState = 'desc';
+            icon.className = 'bi bi-sort-up small'; 
+
+            items.sort((a, b) => {
+                let dateA = a.getAttribute('data-date');
+                let dateB = b.getAttribute('data-date');
+                const isInvalidA = !dateA || dateA === "" || dateA === "None";
+                const isInvalidB = !dateB || dateB === "" || dateB === "None";
+                if (isInvalidA && isInvalidB) return 0;
+                if (isInvalidA) return 1; 
+                if (isInvalidB) return -1; 
+                return dateB.localeCompare(dateA);
+            });
+
+        } else {
+            // 3. Switch to Original (using index)
+            printSortState = 'default';
+            icon.className = 'bi bi-arrow-down-up small';
+            
+            items.sort((a, b) => {
+                return parseInt(a.getAttribute('data-index')) - parseInt(b.getAttribute('data-index'));
+            });
+        }
+
         items.forEach(item => container.appendChild(item));
     }
 
@@ -422,8 +460,6 @@
     function refreshAllDropdowns() { document.querySelectorAll('.autocomplete-items').forEach(list => { list.innerHTML = ""; globalDocTypes.forEach(doc => { list.insertAdjacentHTML('beforeend', `<div class="autocomplete-item"><span onmousedown="selectItem(this)">${doc.name}</span><span class="delete-doc-btn" onmousedown="deleteDocType('${doc.id}', this)">🗑️</span></div>`); }); list.insertAdjacentHTML('beforeend', `<div class="autocomplete-add-btn" onmousedown="openAddDocModal()">+ Add New Document</div>`); }); }
     let selectedIds = new Set();
     function toggleSelection(el) { const checkbox = el.querySelector('input'); const id = checkbox.value; if (selectedIds.has(id)) { selectedIds.delete(id); el.classList.remove('selected'); checkbox.checked = false; } else { if(selectedIds.size >= 4) { alert("Maximum 4 folders allowed per print."); return; } selectedIds.add(id); el.classList.add('selected'); checkbox.checked = true; } document.getElementById('selectionCount').innerText = `${selectedIds.size} selected`; }
-    let sortOrder = 'desc'; 
-    function sortSelectionByDate() { const container = document.getElementById('selectionListContainer'); const items = Array.from(container.children); const btnIcon = document.querySelector('#sortBtn i'); sortOrder = sortOrder === 'desc' ? 'asc' : 'desc'; items.sort((a, b) => { const dateA = a.getAttribute('data-date') || ''; const dateB = b.getAttribute('data-date') || ''; return sortOrder === 'asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA); }); btnIcon.className = sortOrder === 'asc' ? 'bi bi-sort-up' : 'bi bi-sort-down'; items.forEach(item => container.appendChild(item)); }
     function proceedToPreview() { const container = document.getElementById('previewGridContainer'); container.innerHTML = ''; if (selectedIds.size === 0) { alert("Please select at least one folder."); return; } container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`; selectedIds.forEach(id => { const sourceCard = document.getElementById('print-card-' + id); if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); } }); bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide(); new bootstrap.Modal(document.getElementById('printPreviewModal')).show(); }
     function printFinalGrid() { markAsPrinted(Array.from(selectedIds)); const printContent = document.getElementById('previewGridContainer').innerHTML; const count = selectedIds.size; const gridClass = count === 1 ? 'grid-1' : 'grid-4'; const originalContent = document.body.innerHTML; document.body.innerHTML = `<div id="finalPrintContainer" class="${gridClass}">${printContent}</div>`; window.print(); setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500); }
     function printDiv(divId, envId) { markAsPrinted([envId]); const content = document.getElementById(divId).innerHTML; document.body.innerHTML = `<div id="finalPrintContainer" class="grid-1"><div class="print-card" style="width:100%;">${content}</div></div>`; window.print(); setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500); }
