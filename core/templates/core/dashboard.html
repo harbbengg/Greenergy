@@ -75,7 +75,7 @@
                 </thead>
                 <tbody id="tableBody">
                     {% for env in envelopes %}
-                    <tr data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}">
+                    <tr data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}" data-index="{{ forloop.counter0 }}">
                         <td class="align-middle bg-light">
                             <div class="d-flex align-items-start justify-content-between w-100 position-relative">
                                 <div class="fw-bold text-success me-2" style="flex: 1; word-break: break-word; white-space: normal; line-height: 1.2;">
@@ -216,24 +216,22 @@
             <input type="text" id="printSearch" class="form-control form-control-sm rounded-pill ps-4" placeholder="Search Title...">
             <i class="bi bi-search position-absolute text-muted small" style="left: 10px; top: 50%; transform: translateY(-50%);"></i>
         </div>
-        
         <select id="printRegionFilter" class="form-select form-select-sm rounded-pill" style="width: auto; max-width: 150px;">
             <option value="">All Regions</option>
             {% for region in regions %}
             <option value="{{ region.name|lower }}">{{ region.name }}</option>
             {% endfor %}
         </select>
-
         <button class="btn btn-outline-secondary btn-sm rounded-pill text-nowrap px-3" onclick="sortSelectionByDate()">
             Date <i id="printSortDateIcon" class="bi bi-arrow-down-up small"></i>
         </button>
     </div>
-
+    
     <div class="selection-list" id="selectionListContainer">
         {% for env in envelopes %}
         <div class="selection-item" 
              data-title="{{ env.title|lower }}" 
-             data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}"
+             data-date="{% with env.documents.first as doc %}{{ doc.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}"
              data-region="{{ env.region.name|lower }}"
              data-index="{{ forloop.counter0 }}" 
              onclick="toggleSelection(this)">
@@ -358,7 +356,6 @@
         });
     }
 
-    // Attach Listeners
     document.getElementById('printSearch').addEventListener('input', filterPrintItems);
     document.getElementById('printRegionFilter').addEventListener('change', filterPrintItems);
 
@@ -461,12 +458,44 @@
     let selectedIds = new Set();
     function toggleSelection(el) { const checkbox = el.querySelector('input'); const id = checkbox.value; if (selectedIds.has(id)) { selectedIds.delete(id); el.classList.remove('selected'); checkbox.checked = false; } else { if(selectedIds.size >= 4) { alert("Maximum 4 folders allowed per print."); return; } selectedIds.add(id); el.classList.add('selected'); checkbox.checked = true; } document.getElementById('selectionCount').innerText = `${selectedIds.size} selected`; }
     function proceedToPreview() { const container = document.getElementById('previewGridContainer'); container.innerHTML = ''; if (selectedIds.size === 0) { alert("Please select at least one folder."); return; } container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`; selectedIds.forEach(id => { const sourceCard = document.getElementById('print-card-' + id); if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); } }); bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide(); new bootstrap.Modal(document.getElementById('printPreviewModal')).show(); }
-    function printFinalGrid() { markAsPrinted(Array.from(selectedIds)); const printContent = document.getElementById('previewGridContainer').innerHTML; const count = selectedIds.size; const gridClass = count === 1 ? 'grid-1' : 'grid-4'; const originalContent = document.body.innerHTML; document.body.innerHTML = `<div id="finalPrintContainer" class="${gridClass}">${printContent}</div>`; window.print(); setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500); }
-    function printDiv(divId, envId) { markAsPrinted([envId]); const content = document.getElementById(divId).innerHTML; document.body.innerHTML = `<div id="finalPrintContainer" class="grid-1"><div class="print-card" style="width:100%;">${content}</div></div>`; window.print(); setTimeout(() => { document.body.innerHTML = originalContent; location.reload(); }, 500); }
+    
+    // --- CONFIRMATION AFTER PRINT ---
+    function printFinalGrid() {
+        const printContent = document.getElementById('previewGridContainer').innerHTML;
+        const count = selectedIds.size;
+        const gridClass = count === 1 ? 'grid-1' : 'grid-4';
+        const originalContent = document.body.innerHTML;
+        document.body.innerHTML = `<div id="finalPrintContainer" class="${gridClass}">${printContent}</div>`;
+        
+        window.print();
+        
+        // This runs after print dialog closes (in most browsers)
+        setTimeout(() => { 
+            if(confirm("Did the documents print successfully? Click OK to mark them as Printed.")) {
+                markAsPrinted(Array.from(selectedIds));
+            }
+            document.body.innerHTML = originalContent; 
+            location.reload(); 
+        }, 500);
+    }
+
+    function printDiv(divId, envId) {
+        const content = document.getElementById(divId).innerHTML;
+        document.body.innerHTML = `<div id="finalPrintContainer" class="grid-1"><div class="print-card" style="width:100%;">${content}</div></div>`;
+        
+        window.print();
+        
+        setTimeout(() => { 
+            if(confirm("Did the document print successfully? Click OK to mark it as Printed.")) {
+                markAsPrinted([envId]);
+            }
+            document.body.innerHTML = originalContent; // Restore layout if needed or reload
+            location.reload(); 
+        }, 500);
+    }
+
     function prepareSinglePrint(id) { const modal = new bootstrap.Modal(document.getElementById('previewModal' + id)); modal.show(); }
     function closeAllPopups() { document.querySelectorAll('.content-popup').forEach(el => el.style.display = 'none'); }
     function togglePopup(id, e) { e.stopPropagation(); let el = document.getElementById(id); let vis = el.style.display === 'block'; closeAllPopups(); if(!vis) el.style.display='block'; }
     window.onclick = e => { if(!e.target.closest('.more-badge-container')) closeAllPopups(); };
 </script>
-</body>
-</html>
