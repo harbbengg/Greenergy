@@ -20,4 +20,5 @@ urlpatterns = [
     path('add-document-type/', views.add_document_type, name='add_document_type'),
     path('delete-document-type/', views.delete_document_type, name='delete_document_type'),
     path('update-print-status/', views.update_print_status, name='update_print_status'), # NEW
+    path('bulk-update-door/', views.bulk_update_door, name='bulk_update_door'),
 ]

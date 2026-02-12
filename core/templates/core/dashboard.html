@@ -7,25 +7,8 @@
     <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
     
-    <style>
-        .custom-table { table-layout: fixed; width: 100%; }
-        .action-cell { display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .check-circle { cursor: pointer; transition: transform 0.2s; font-size: 1.2rem; }
-        .check-circle:hover { transform: scale(1.2); }
-        .printed-indicator { font-size: 0.8rem; margin-left: 5px; }
-        
-        th.sortable { cursor: pointer !important; user-select: none; position: relative; transition: background-color 0.2s; }
-        th.sortable:hover { background-color: #d1e7dd !important; color: #0f5132; }
-
-        /* Print Modal Styles */
-        .selection-list { max-height: 400px; overflow-y: auto; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; }
-        .selection-item { background: white; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; align-items: center; cursor: pointer; border: 1px solid transparent; transition: 0.1s; }
-        .selection-item:hover { border-color: #198754; background-color: #f1f8f5; }
-        .selection-item.selected { background-color: #d1e7dd; border-color: #198754; }
-        .region-badge { font-size: 0.7rem; background: #e9ecef; color: #495057; padding: 2px 6px; border-radius: 4px; margin-right: 10px; font-weight: bold; }
-    </style>
+    <link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
 </head>
 <body>
 
@@ -42,18 +25,30 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-3 ms-3">
-                <div class="text-end" style="line-height: 1.2;">
-                    <span class="fw-bold text-secondary d-block">👤 {{ user.username }} | {{ user.department }}</span>
-                    <a href="#" class="small text-success text-decoration-none" data-bs-toggle="modal" data-bs-target="#activityModal">
-                        <i class="bi bi-clock-history"></i> Recent Activity
-                    </a>
-                </div>
+               <div class="text-end" style="line-height: 1.2;">
+    <span class="fw-bold text-secondary d-block">👤 {{ user.username }} | {{ user.department }}</span>
+    
+    <a id="draftIndicator" class="small text-success text-decoration-none fw-bold me-3" style="cursor: pointer;" onclick="openDraftModal()">
+        <i class="bi bi-file-earmark-text-fill"></i> Resume Draft
+    </a>
+
+    <a href="#" class="small text-success text-decoration-none" data-bs-toggle="modal" data-bs-target="#activityModal">
+        <i class="bi bi-clock-history"></i> Recent Activity
+    </a>
+</div>
                 <form action="{% url 'logout' %}" method="post">{% csrf_token %}<button type="submit" class="btn btn-danger btn-sm">Logout</button></form>
             </div>
         </div>
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <button class="btn btn-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addEnvelopeModal">Add Folder +</button>
+            <div class="d-flex gap-2 align-items-center">
+                <button class="btn btn-success btn-sm fw-bold" onclick="openEmptyAddModal()">Add Folder +</button>
+                
+                <button class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #198754;" onclick="openBulkEditModal()">
+                    <i class="bi bi-arrow-repeat me-1"></i> Change Door #
+                </button>
+            </div>
+            
             <button class="btn btn-dark btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#printSelectionModal"><i class="bi bi-printer-fill me-1"></i> Print All Folders</button>
         </div>
 
@@ -75,7 +70,9 @@
                 </thead>
                 <tbody id="tableBody">
                     {% for env in envelopes %}
-                    <tr data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}" data-index="{{ forloop.counter0 }}">
+                    <tr data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}" 
+                        data-index="{{ forloop.counter0 }}">
+                        
                         <td class="align-middle bg-light">
                             <div class="d-flex align-items-start justify-content-between w-100 position-relative">
                                 <div class="fw-bold text-success me-2" style="flex: 1; word-break: break-word; white-space: normal; line-height: 1.2;">
@@ -140,9 +137,40 @@
                             </div>
                         </td>
                     </tr>
-                    {% empty %}<tr><td colspan="9" class="text-center py-5 text-muted">No folders found.</td></tr>{% endfor %}
+                    {% empty %}<tr><td colspan="8" class="text-center empty-state-cell">No folders found.</td></tr>{% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="bulkEditDoorModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header text-white p-2" style="background-color: #198754;">
+                <h6 class="modal-title fw-bold">Change Door #</h6>
+                <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="mb-3">
+    <label class="small text-muted fw-bold mb-1">Find Door Number:</label>
+    <select id="findDoorValue" class="form-select form-select-sm">
+    <option value="">-- Select Door to Change --</option>
+    
+    <option value="__EMPTY__" style="color: red; font-weight: bold;">[Records with No Door #]</option>
+    
+    {% for door in unique_doors %}
+        {% if door %} <option value="{{ door }}">{{ door }}</option>
+        {% endif %}
+    {% endfor %}
+</select>
+</div>
+                <div class="mb-3">
+                    <label class="small text-muted fw-bold mb-1">Change to:</label>
+                    <input type="text" id="replaceDoorValue" class="form-control form-control-sm" placeholder="e.g. 2">
+                </div>
+                <button type="button" class="btn w-100 fw-bold text-white" style="background-color: #198754;" onclick="submitBulkDoorUpdate()">Update All</button>
+            </div>
         </div>
     </div>
 </div>
@@ -172,7 +200,7 @@
                 <div id="content-rows"></div>
                 <button type="button" class="btn btn-outline-success btn-sm mt-2" onclick="addRow()">+ Add Doc</button>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetForm()">Cancel</button><button type="submit" class="btn btn-success">Save Folder</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Save Folder</button></div>
         </form>
     </div>
 </div>
@@ -231,7 +259,7 @@
         {% for env in envelopes %}
         <div class="selection-item" 
              data-title="{{ env.title|lower }}" 
-             data-date="{% with env.documents.first as doc %}{{ doc.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}"
+             data-date="{% with env.documents.first as d %}{{ d.date_notarized|date:'Y-m-d'|default:'' }}{% endwith %}"
              data-region="{{ env.region.name|lower }}"
              data-index="{{ forloop.counter0 }}" 
              onclick="toggleSelection(this)">
@@ -266,7 +294,8 @@
     document.addEventListener("DOMContentLoaded", function() {
         if(document.getElementById('content-rows').innerHTML.trim() === "") { addRow(); }
         var addModal = document.getElementById('addEnvelopeModal');
-        addModal.addEventListener('hidden.bs.modal', function () { resetForm(); });
+        // Keep draft on close
+        
         const searchInput = document.getElementById('searchInput');
         const clearBtn = document.getElementById('clearSearchBtn');
         let timeout = null;
@@ -282,7 +311,130 @@
             }, 300);
         });
         clearBtn.onclick = () => { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); };
+
+        // Auto-save
+        document.getElementById('addEnvelopeForm').addEventListener('input', saveDraft);
     });
+
+    // --- DRAFT SYSTEM (FIXED) ---
+    function saveDraft() {
+        const form = document.getElementById('addEnvelopeForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        let metaValues = [];
+        document.querySelectorAll('#meta-rows-container .meta-row').forEach(row => {
+            metaValues.push({
+                project: row.querySelector('input[name="project_entity[]"]').value,
+                procuring: row.querySelector('input[name="procuring_entity[]"]').value,
+                sales: row.querySelector('input[name="sales_name[]"]').value,
+                door: row.querySelector('input[name="door_number[]"]').value
+            });
+        });
+
+        let contentValues = [];
+        document.querySelectorAll('#content-rows .row').forEach(row => {
+            const contextInput = row.querySelector('input[name="context[]"]');
+            if(contextInput) {
+                contentValues.push({
+                    context: contextInput.value,
+                    pages: row.querySelector('input[name="pages[]"]').value,
+                    date: row.querySelector('input[name="date[]"]').value
+                });
+            }
+        });
+
+        const draftObj = { static: data, meta: metaValues, content: contentValues };
+        localStorage.setItem('folderDraft', JSON.stringify(draftObj));
+    }
+
+    function openEmptyAddModal() {
+        resetForm(); // Clear UI
+        new bootstrap.Modal(document.getElementById('addEnvelopeModal')).show();
+    }
+
+    function openDraftModal() {
+        const draft = localStorage.getItem('folderDraft');
+        // --- FIXED ALERT LOGIC ---
+        if (!draft) {
+            alert("NO DRAFTS RIGHT NOW");
+            return;
+        }
+
+        const obj = JSON.parse(draft);
+        const form = document.getElementById('addEnvelopeForm');
+
+        form.querySelector('input[name="title"]').value = obj.static.title || '';
+        form.querySelector('select[name="region_id"]').value = obj.static.region_id || '';
+
+        const metaContainer = document.getElementById('meta-rows-container');
+        metaContainer.innerHTML = ''; 
+        if(obj.meta && obj.meta.length > 0) {
+            obj.meta.forEach(m => {
+                metaContainer.insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title" value="${m.project}"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity" value="${m.procuring}"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name" value="${m.sales}"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #" value="${m.door}"></div></div>`);
+            });
+        } else {
+             metaContainer.innerHTML = `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`;
+        }
+
+        const contentContainer = document.getElementById('content-rows');
+        contentContainer.innerHTML = '';
+        if(obj.content && obj.content.length > 0) {
+            obj.content.forEach(c => {
+                contentContainer.insertAdjacentHTML('beforeend', `<div class="row g-2 mb-2 content-row"><div class="col-md-6">${getDropdownHTML(c.context)}</div><div class="col-md-2"><input type="number" name="pages[]" class="form-control" value="${c.pages}"></div><div class="col-md-4"><input type="date" name="date[]" class="form-control" value="${c.date}"></div></div>`);
+            });
+        } else {
+            addRow();
+        }
+        
+        new bootstrap.Modal(document.getElementById('addEnvelopeModal')).show();
+    }
+
+    document.getElementById('addEnvelopeForm').addEventListener('submit', function() {
+        if(validateDates(this)) {
+            localStorage.removeItem('folderDraft');
+            return true;
+        }
+        return false;
+    });
+
+    // --- BULK ACTION (FIND & REPLACE) ---
+    function openBulkEditModal() { new bootstrap.Modal(document.getElementById('bulkEditDoorModal')).show(); }
+    
+    function submitBulkDoorUpdate() {
+    let oldVal = document.getElementById('findDoorValue').value;
+    const newVal = document.getElementById('replaceDoorValue').value;
+    
+    // Check if user selected nothing (default empty string)
+    if (oldVal === "") {
+        alert("Please select which Door Number group you want to update.");
+        return;
+    }
+
+    if (!newVal) {
+        alert("Please enter the new Door Number.");
+        return;
+    }
+
+    // Prepare data
+    const payload = {
+        old_door: oldVal, // backend will handle "__EMPTY__"
+        new_door: newVal
+    };
+    
+    fetch("{% url 'bulk_update_door' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            alert("Updated successfully!");
+            location.reload();
+        } else {
+            alert("Error updating. Please try again.");
+        }
+    });
+}
 
     function validateDates(form) {
         if(!form) form = document.getElementById('addEnvelopeForm');
@@ -300,7 +452,7 @@
         return true;
     }
 
-    // --- MAIN TABLE SORTING (3-WAY) ---
+    // --- MAIN TABLE SORTING ---
     let currentSortMode = 'default'; 
     function sortTableByDate() {
         const tableBody = document.getElementById('tableBody');
@@ -309,7 +461,7 @@
 
         if (currentSortMode === 'default' || currentSortMode === 'desc') {
             currentSortMode = 'asc';
-            icon.className = 'bi bi-sort-down-alt text-primary small'; 
+            icon.className = 'bi bi-sort-down-alt small text-success'; 
             rows.sort((a, b) => {
                 let dateA = a.getAttribute('data-date');
                 let dateB = b.getAttribute('data-date');
@@ -322,7 +474,7 @@
             });
         } else if (currentSortMode === 'asc') {
             currentSortMode = 'desc';
-            icon.className = 'bi bi-sort-up text-primary small'; 
+            icon.className = 'bi bi-sort-up small text-success'; 
             rows.sort((a, b) => {
                 let dateA = a.getAttribute('data-date');
                 let dateB = b.getAttribute('data-date');
@@ -340,43 +492,33 @@
         rows.forEach(row => tableBody.appendChild(row));
     }
 
-    // --- PRINT MODAL: FILTER LOGIC (SEARCH + REGION) ---
+    // --- PRINT MODAL SORT/FILTER ---
     function filterPrintItems() {
         const searchVal = document.getElementById('printSearch').value.toLowerCase();
         const regionVal = document.getElementById('printRegionFilter').value.toLowerCase();
-        
         document.querySelectorAll('.selection-item').forEach(item => {
             const title = item.getAttribute('data-title');
             const region = item.getAttribute('data-region');
-            
             const matchesSearch = title.includes(searchVal);
             const matchesRegion = regionVal === "" || region === regionVal;
-            
             item.style.display = (matchesSearch && matchesRegion) ? 'flex' : 'none';
         });
     }
-
     document.getElementById('printSearch').addEventListener('input', filterPrintItems);
     document.getElementById('printRegionFilter').addEventListener('change', filterPrintItems);
 
-    // --- PRINT MODAL: 3-WAY SORT DATE (FIXED) ---
     let printSortState = 'default';
-
     function sortSelectionByDate() {
         const container = document.getElementById('selectionListContainer');
         const items = Array.from(container.children);
         const icon = document.getElementById('printSortDateIcon');
 
-        // Cycle: Default -> Ascending (Old-New) -> Descending (New-Old) -> Default
         if (printSortState === 'default' || printSortState === 'desc') {
-            // 1. Switch to Oldest -> Newest (Ascending)
             printSortState = 'asc';
             icon.className = 'bi bi-sort-down-alt small'; 
-            
             items.sort((a, b) => {
                 let dateA = a.getAttribute('data-date');
                 let dateB = b.getAttribute('data-date');
-                // N/A Logic: Force to bottom
                 const isInvalidA = !dateA || dateA === "" || dateA === "None";
                 const isInvalidB = !dateB || dateB === "" || dateB === "None";
                 if (isInvalidA && isInvalidB) return 0;
@@ -384,12 +526,9 @@
                 if (isInvalidB) return -1; 
                 return dateA.localeCompare(dateB);
             });
-
         } else if (printSortState === 'asc') {
-            // 2. Switch to Newest -> Oldest (Descending)
             printSortState = 'desc';
             icon.className = 'bi bi-sort-up small'; 
-
             items.sort((a, b) => {
                 let dateA = a.getAttribute('data-date');
                 let dateB = b.getAttribute('data-date');
@@ -400,17 +539,11 @@
                 if (isInvalidB) return -1; 
                 return dateB.localeCompare(dateA);
             });
-
         } else {
-            // 3. Switch to Original (using index)
             printSortState = 'default';
             icon.className = 'bi bi-arrow-down-up small';
-            
-            items.sort((a, b) => {
-                return parseInt(a.getAttribute('data-index')) - parseInt(b.getAttribute('data-index'));
-            });
+            items.sort((a, b) => parseInt(a.getAttribute('data-index')) - parseInt(b.getAttribute('data-index')));
         }
-
         items.forEach(item => container.appendChild(item));
     }
 
@@ -428,38 +561,7 @@
             }
         }
     }
-    function markAsPrinted(ids) {
-        ids.forEach(id => {
-            const icon = document.getElementById('check-' + id);
-            if(icon) icon.className = "bi bi-check-circle-fill text-success check-circle";
-            updateModalListStatus(id, true);
-        });
-        fetch("{% url 'update_print_status' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids, status: true }) });
-    }
-    function togglePrintedStatus(id) {
-        const icon = document.getElementById('check-' + id);
-        const newStatus = !icon.classList.contains('bi-check-circle-fill');
-        icon.className = newStatus ? "bi bi-check-circle-fill text-success check-circle" : "bi bi-circle text-secondary check-circle";
-        updateModalListStatus(id, newStatus);
-        fetch("{% url 'update_print_status' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ ids: [id], status: newStatus }) });
-    }
-    function addRow() { document.getElementById('content-rows').insertAdjacentHTML('beforeend', `<div class="row g-2 mb-2 content-row"><div class="col-md-6">${getDropdownHTML()}</div><div class="col-md-2"><input type="number" name="pages[]" class="form-control" value="1"></div><div class="col-md-4"><input type="date" name="date[]" class="form-control"></div></div>`); }
-    function addMetaRow(id) { document.getElementById(id).insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`); }
-    function addEditRow(id) { document.getElementById('edit-content-rows-' + id).insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2"><div class="col-6">${getDropdownHTML()}</div><div class="col-2"><input type="number" name="pages[]" class="form-control form-control-sm"></div><div class="col-4"><input type="date" name="date[]" class="form-control form-control-sm"></div></div>`); }
-    function resetForm() { const form = document.getElementById('addEnvelopeForm'); form.reset(); document.getElementById('content-rows').innerHTML = ""; addRow(); document.getElementById('meta-rows-container').innerHTML = `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`; }
-    function showDropdown(input) { const wrapper = input.closest('.autocomplete-wrapper'); wrapper.querySelector('.autocomplete-items').style.display = 'block'; }
-    function hideDropdown(input) { setTimeout(() => { const wrapper = input.closest('.autocomplete-wrapper'); if(wrapper) wrapper.querySelector('.autocomplete-items').style.display = 'none'; }, 200); }
-    function toggleDropdown(span) { const wrapper = span.closest('.autocomplete-wrapper'); wrapper.querySelector('input').focus(); }
-    function selectItem(span) { const wrapper = span.closest('.autocomplete-wrapper'); wrapper.querySelector('input').value = span.innerText; }
-    function openAddDocModal() { new bootstrap.Modal(document.getElementById('addNewDocTypeModal')).show(); }
-    function saveNewDocType() { const name = document.getElementById('newDocTypeName').value; if(!name) return; fetch("{% url 'add_document_type' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ name: name }) }).then(response => response.json()).then(data => { if(data.success) { globalDocTypes.push({id: data.id, name: data.name}); globalDocTypes.sort((a,b) => a.name.localeCompare(b.name)); refreshAllDropdowns(); bootstrap.Modal.getInstance(document.getElementById('addNewDocTypeModal')).hide(); document.getElementById('newDocTypeName').value = ""; } }); }
-    function deleteDocType(id, btn) { if(!confirm("Delete this document suggestion permanently?")) return; fetch("{% url 'delete_document_type' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ id: id }) }).then(response => response.json()).then(data => { if(data.success) { globalDocTypes = globalDocTypes.filter(doc => doc.id != id); refreshAllDropdowns(); } }); }
-    function refreshAllDropdowns() { document.querySelectorAll('.autocomplete-items').forEach(list => { list.innerHTML = ""; globalDocTypes.forEach(doc => { list.insertAdjacentHTML('beforeend', `<div class="autocomplete-item"><span onmousedown="selectItem(this)">${doc.name}</span><span class="delete-doc-btn" onmousedown="deleteDocType('${doc.id}', this)">🗑️</span></div>`); }); list.insertAdjacentHTML('beforeend', `<div class="autocomplete-add-btn" onmousedown="openAddDocModal()">+ Add New Document</div>`); }); }
-    let selectedIds = new Set();
-    function toggleSelection(el) { const checkbox = el.querySelector('input'); const id = checkbox.value; if (selectedIds.has(id)) { selectedIds.delete(id); el.classList.remove('selected'); checkbox.checked = false; } else { if(selectedIds.size >= 4) { alert("Maximum 4 folders allowed per print."); return; } selectedIds.add(id); el.classList.add('selected'); checkbox.checked = true; } document.getElementById('selectionCount').innerText = `${selectedIds.size} selected`; }
-    function proceedToPreview() { const container = document.getElementById('previewGridContainer'); container.innerHTML = ''; if (selectedIds.size === 0) { alert("Please select at least one folder."); return; } container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`; selectedIds.forEach(id => { const sourceCard = document.getElementById('print-card-' + id); if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); } }); bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide(); new bootstrap.Modal(document.getElementById('printPreviewModal')).show(); }
     
-    // --- CONFIRMATION AFTER PRINT ---
     function printFinalGrid() {
         const printContent = document.getElementById('previewGridContainer').innerHTML;
         const count = selectedIds.size;
@@ -469,7 +571,6 @@
         
         window.print();
         
-        // This runs after print dialog closes (in most browsers)
         setTimeout(() => { 
             if(confirm("Did the documents print successfully? Click OK to mark them as Printed.")) {
                 markAsPrinted(Array.from(selectedIds));
@@ -489,13 +590,47 @@
             if(confirm("Did the document print successfully? Click OK to mark it as Printed.")) {
                 markAsPrinted([envId]);
             }
-            document.body.innerHTML = originalContent; // Restore layout if needed or reload
+            document.body.innerHTML = originalContent; 
             location.reload(); 
         }, 500);
     }
 
+    function markAsPrinted(ids) {
+        ids.forEach(id => {
+            const icon = document.getElementById('check-' + id);
+            if(icon) icon.className = "bi bi-check-circle-fill text-success check-circle";
+            updateModalListStatus(id, true);
+        });
+        fetch("{% url 'update_print_status' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids, status: true }) });
+    }
+
+    function togglePrintedStatus(id) {
+        const icon = document.getElementById('check-' + id);
+        const newStatus = !icon.classList.contains('bi-check-circle-fill');
+        icon.className = newStatus ? "bi bi-check-circle-fill text-success check-circle" : "bi bi-circle text-secondary check-circle";
+        updateModalListStatus(id, newStatus);
+        fetch("{% url 'update_print_status' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ ids: [id], status: newStatus }) });
+    }
+
+    function addRow() { document.getElementById('content-rows').insertAdjacentHTML('beforeend', `<div class="row g-2 mb-2 content-row"><div class="col-md-6">${getDropdownHTML()}</div><div class="col-md-2"><input type="number" name="pages[]" class="form-control" value="1"></div><div class="col-md-4"><input type="date" name="date[]" class="form-control"></div></div>`); }
+    function addMetaRow(id) { document.getElementById(id).insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`); }
+    function addEditRow(id) { document.getElementById('edit-content-rows-' + id).insertAdjacentHTML('beforeend', `<div class="row g-1 mb-2"><div class="col-6">${getDropdownHTML()}</div><div class="col-2"><input type="number" name="pages[]" class="form-control form-control-sm"></div><div class="col-4"><input type="date" name="date[]" class="form-control form-control-sm"></div></div>`); }
+    function resetForm() { const form = document.getElementById('addEnvelopeForm'); form.reset(); document.getElementById('content-rows').innerHTML = ""; addRow(); document.getElementById('meta-rows-container').innerHTML = `<div class="row g-1 mb-2 bg-light p-2 rounded border meta-row"><div class="col-md-4"><input type="text" name="project_entity[]" class="form-control form-control-sm" placeholder="Project Title"></div><div class="col-md-4"><input type="text" name="procuring_entity[]" class="form-control form-control-sm" placeholder="Procuring Entity"></div><div class="col-md-2"><input type="text" name="sales_name[]" class="form-control form-control-sm" placeholder="Sales Name"></div><div class="col-md-2"><input type="text" name="door_number[]" class="form-control form-control-sm" placeholder="Door #"></div></div>`; }
+    function showDropdown(input) { const wrapper = input.closest('.autocomplete-wrapper'); wrapper.querySelector('.autocomplete-items').style.display = 'block'; }
+    function hideDropdown(input) { setTimeout(() => { const wrapper = input.closest('.autocomplete-wrapper'); if(wrapper) wrapper.querySelector('.autocomplete-items').style.display = 'none'; }, 200); }
+    function toggleDropdown(span) { const wrapper = span.closest('.autocomplete-wrapper'); wrapper.querySelector('input').focus(); }
+    function selectItem(span) { const wrapper = span.closest('.autocomplete-wrapper'); wrapper.querySelector('input').value = span.innerText; }
+    function openAddDocModal() { new bootstrap.Modal(document.getElementById('addNewDocTypeModal')).show(); }
+    function saveNewDocType() { const name = document.getElementById('newDocTypeName').value; if(!name) return; fetch("{% url 'add_document_type' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ name: name }) }).then(response => response.json()).then(data => { if(data.success) { globalDocTypes.push({id: data.id, name: data.name}); globalDocTypes.sort((a,b) => a.name.localeCompare(b.name)); refreshAllDropdowns(); bootstrap.Modal.getInstance(document.getElementById('addNewDocTypeModal')).hide(); document.getElementById('newDocTypeName').value = ""; } }); }
+    function deleteDocType(id, btn) { if(!confirm("Delete this document suggestion permanently?")) return; fetch("{% url 'delete_document_type' %}", { method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json" }, body: JSON.stringify({ id: id }) }).then(response => response.json()).then(data => { if(data.success) { globalDocTypes = globalDocTypes.filter(doc => doc.id != id); refreshAllDropdowns(); } }); }
+    function refreshAllDropdowns() { document.querySelectorAll('.autocomplete-items').forEach(list => { list.innerHTML = ""; globalDocTypes.forEach(doc => { list.insertAdjacentHTML('beforeend', `<div class="autocomplete-item"><span onmousedown="selectItem(this)">${doc.name}</span><span class="delete-doc-btn" onmousedown="deleteDocType('${doc.id}', this)">🗑️</span></div>`); }); list.insertAdjacentHTML('beforeend', `<div class="autocomplete-add-btn" onmousedown="openAddDocModal()">+ Add New Document</div>`); }); }
+    let selectedIds = new Set();
+    function toggleSelection(el) { const checkbox = el.querySelector('input'); const id = checkbox.value; if (selectedIds.has(id)) { selectedIds.delete(id); el.classList.remove('selected'); checkbox.checked = false; } else { if(selectedIds.size >= 4) { alert("Maximum 4 folders allowed per print."); return; } selectedIds.add(id); el.classList.add('selected'); checkbox.checked = true; } document.getElementById('selectionCount').innerText = `${selectedIds.size} selected`; }
+    function proceedToPreview() { const container = document.getElementById('previewGridContainer'); container.innerHTML = ''; if (selectedIds.size === 0) { alert("Please select at least one folder."); return; } container.className = `print-grid bg-white p-4 shadow-sm ${selectedIds.size === 1 ? 'grid-1' : 'grid-4'}`; selectedIds.forEach(id => { const sourceCard = document.getElementById('print-card-' + id); if (sourceCard) { container.appendChild(sourceCard.cloneNode(true)); } }); bootstrap.Modal.getInstance(document.getElementById('printSelectionModal')).hide(); new bootstrap.Modal(document.getElementById('printPreviewModal')).show(); }
     function prepareSinglePrint(id) { const modal = new bootstrap.Modal(document.getElementById('previewModal' + id)); modal.show(); }
     function closeAllPopups() { document.querySelectorAll('.content-popup').forEach(el => el.style.display = 'none'); }
     function togglePopup(id, e) { e.stopPropagation(); let el = document.getElementById(id); let vis = el.style.display === 'block'; closeAllPopups(); if(!vis) el.style.display='block'; }
     window.onclick = e => { if(!e.target.closest('.more-badge-container')) closeAllPopups(); };
 </script>
+</body>
+</html>
