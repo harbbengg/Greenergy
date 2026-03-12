@@ -24,7 +24,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'greenergy-exgv.onrender.com', # Your Render URL
+    'greenergy-exgv.onrender.com',
+    'greenergy-mu.vercel.app', # Your Render URL
 ]
 
 
