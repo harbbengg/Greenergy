@@ -1,5 +1,5 @@
 {
-    "buildCommand": "bash build_files.sh",
+    "version": 2,
     "builds": [
         {
             "src": "config/wsgi.py",
@@ -8,10 +8,6 @@
         }
     ],
     "routes": [
-        {
-            "src": "/static/(.*)",
-            "dest": "/static/$1"
-        },
         {
             "src": "/(.*)",
             "dest": "config/wsgi.py"
