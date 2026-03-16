@@ -6,6 +6,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 try:
     from django.core.wsgi import get_wsgi_application
     application = get_wsgi_application()
+    
+    # Vercel needs the variable to be named 'app'
+    app = application 
+    
 except Exception as e:
     traceback.print_exc()
     def application(environ, start_response):
@@ -14,3 +18,6 @@ except Exception as e:
         response_headers = [('Content-type', 'text/plain'), ('Content-Length', str(len(output)))]
         start_response(status, response_headers)
         return [output]
+    
+    # Also assign the fallback to 'app'
+    app = application
