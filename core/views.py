@@ -103,8 +103,7 @@ def dashboard(request):
         DocumentType.objects.create(name="SECRETARY'S CERTIFICATE")
         DocumentType.objects.create(name="OMNIBUS SWORN STATEMENT")
 
-    regions = sorted(Region.objects.all(), key=lambda r: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', r.name)])
-    doc_types = DocumentType.objects.all().order_by('name')
+regions = sorted(Region.objects.all(), key=lambda r: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', r.name)])    doc_types = DocumentType.objects.all().order_by('name')
     selected_region_id = request.GET.get('region')
 
     envelopes = Envelope.objects.prefetch_related('documents', 'meta_details').annotate(
